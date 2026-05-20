@@ -83,6 +83,9 @@ public abstract class Animal extends Entity {
         this.wanderTarget = null;
         this.naturalEnemies = List.of();
         this.preyTypes = List.of();
+        //update 
+        this.age = 0;
+        this.reproductionCooldown = 0;
     }
 
     @Override
@@ -91,9 +94,15 @@ public abstract class Animal extends Entity {
 
         // 1. Cập nhật nhu cầu sinh tồn
         updateNeeds(deltaTime);
+        //update  
+        age += deltaTime;
+
+        if (reproductionCooldown > 0) {
+            reproductionCooldown -= deltaTime;
+        }
 
         // 2. Kiểm tra chết
-        if (health <= 0 || hunger <= 0 || thirst <= 0) {
+        if (health <= 0) {
             die();
             return;
         }
@@ -106,6 +115,7 @@ public abstract class Animal extends Entity {
      * Thực hiện hành động đã quyết định bởi strategy.
      * Gọi bởi SimulationEngine sau khi strategy.decide().
      */
+
     public void executeAction(Action action, double deltaTime, WorldMap worldMap) {
         if (!alive) return;
 
@@ -114,7 +124,20 @@ public abstract class Animal extends Entity {
             case WANDER -> doWander(deltaTime, worldMap);
             case MOVE_TO -> doMoveTo(action.getTargetPosition(), deltaTime, worldMap, false);
             case EAT -> doEat(action.getTargetEntity(), deltaTime);
-            case DRINK -> doMoveTo(action.getTargetPosition(), deltaTime, worldMap, false);
+            case DRINK -> {
+
+                                doMoveTo(
+                                    action.getTargetPosition(),
+                                    deltaTime,
+                                    worldMap,
+                                    false
+                                );
+
+                                // Nếu tới gần nước thì uống
+                                if (position.distanceTo(action.getTargetPosition()) < 1.5) {
+                                    drinkWater();
+                                }
+                            }
             case ATTACK -> doAttack(action.getTargetEntity(), deltaTime);
             case FLEE -> doFlee(action.getTargetPosition(), deltaTime, worldMap);
             case HIDE -> doMoveTo(action.getTargetPosition(), deltaTime, worldMap, true);
@@ -123,7 +146,28 @@ public abstract class Animal extends Entity {
     }
 
     // ===== Cập nhật nhu cầu sinh tồn =====
+    public boolean canReproduce() {
 
+    return alive &&
+           health > maxHealth * 0.5 &&
+           hunger > Constants.MAX_HUNGER * 0.4 &&
+           thirst > Constants.MAX_THIRST * 0.4 &&
+           age > 8 &&
+           reproductionCooldown <= 0;
+    }   
+    public void resetReproductionCooldown() {
+        reproductionCooldown = Constants.REPRODUCTION_COOLDOWN;
+    }
+    
+    /**
+     * Create an offspring of this animal.
+     * 
+     * Note: This is now primarily used internally by AnimalReproductionFactory.
+     * Each animal subclass must implement this to create offspring at nearby position.
+     * 
+     * @return A new offspring animal of the same species, or null if reproduction not supported
+     */
+    public abstract Animal createOffspring();
     /** Giảm hunger, thirst theo thời gian */
     protected void updateNeeds(double deltaTime) {
         // Đói dần
@@ -146,7 +190,7 @@ public abstract class Animal extends Entity {
         if (hunger < Constants.CRITICAL_HUNGER) {
             speed = maxSpeed * 0.6;
         } else {
-            speed = maxSpeed;
+            speed = maxSpeed*0.85;
         }
     }
 
@@ -204,6 +248,7 @@ public abstract class Animal extends Entity {
             if (food instanceof Plant plant) {
                 double nutrition = plant.beEaten();
                 hunger = Math.min(Constants.MAX_HUNGER, hunger + nutrition);
+                health = Math.min(maxHealth, health + 5);
             } else if (food instanceof Animal prey) {
                 // Ăn thịt con mồi đã chết
                 if (!prey.isAlive()) {
@@ -254,7 +299,10 @@ public abstract class Animal extends Entity {
             die();
         }
     }
-
+    //update
+    protected double age;
+    protected double reproductionCooldown;
+    //update
     /** Chết */
     protected void die() {
         alive = false;
@@ -314,4 +362,7 @@ public abstract class Animal extends Entity {
 
     public void setHunger(double hunger) { this.hunger = Math.max(0, Math.min(Constants.MAX_HUNGER, hunger)); }
     public void setThirst(double thirst) { this.thirst = Math.max(0, Math.min(Constants.MAX_THIRST, thirst)); }
+    
+    public double getAge() { return age; }
+    public double getReproductionCooldown() { return reproductionCooldown; }
 }

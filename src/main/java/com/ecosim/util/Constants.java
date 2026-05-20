@@ -39,13 +39,13 @@ public final class Constants {
 
     // ===== Entity defaults =====
     /** Giá trị tối đa cho hunger/thirst */
-    public static final double MAX_HUNGER = 100.0;
-    public static final double MAX_THIRST = 100.0;
+    public static final double MAX_HUNGER = 200.0;
+    public static final double MAX_THIRST = 200.0;
     public static final double MAX_HEALTH = 100.0;
 
     /** Tốc độ giảm hunger/thirst mỗi giây */
-    public static final double HUNGER_DECAY_RATE = 2.0;
-    public static final double THIRST_DECAY_RATE = 3.0;
+    public static final double HUNGER_DECAY_RATE = 0.25;
+    public static final double THIRST_DECAY_RATE = 0.25;
 
     /** Ngưỡng nguy hiểm */
     public static final double CRITICAL_HUNGER = 20.0;
@@ -93,6 +93,30 @@ public final class Constants {
     public static final Color TERRAIN_MUD = Color.web("#8B7355");
     public static final Color TERRAIN_ROCK = Color.web("#696969");
     public static final Color TERRAIN_BUSH = Color.web("#3A6B35");
+
+    // ===== Reproduction System =====
+    /** Probability of reproduction during SPRING (0.0-1.0) */
+    public static final double REPRODUCTION_CHANCE = 0.3;
+    
+    /** Cooldown time between reproductions (seconds) */
+    public static final double REPRODUCTION_COOLDOWN = 60.0;
+    
+    /** Minimum spawn distance from parent (tiles) */
+    public static final double OFFSPRING_MIN_DISTANCE = 0.5;
+    
+    /** Maximum spawn distance from parent (tiles) */
+    public static final double OFFSPRING_MAX_DISTANCE = 3.0;
+    
+    /** Maximum attempts to find valid spawn position */
+    public static final int OFFSPRING_SPAWN_RETRIES = 3;
+    
+    // ===== Population Caps (max animals per species) =====
+    public static final int MAX_RABBITS = 50;
+    public static final int MAX_DEER = 25;
+    public static final int MAX_WOLVES = 15;
+    public static final int MAX_TIGERS = 8;
+    public static final int MAX_ELEPHANTS = 3;
+    public static final int MAX_HUNTERS = 1;
 
     // ===== Window =====
     public static final int WINDOW_WIDTH = 1280;
