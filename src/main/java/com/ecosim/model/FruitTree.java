@@ -19,35 +19,64 @@ public class FruitTree extends Plant {
     private final double fruitGrowthInterval;
 
     public FruitTree(Vector2D position) {
-        super(
-            "Cây ăn quả",       // name
-            position,            // position
-            Constants.PRIORITY_PLANT, // priority
-            0.8,                 // initial size (lớn hơn cỏ)
-            30.0,                // nutritionValue (mỗi quả)
-            0.05,                // growthRate
-            1.5,                 // maxSize
-            60.0,                // spreadInterval (lâu hơn cỏ)
-            5.0                  // spreadRadius
+
+    super(
+            "Cây ăn quả",
+            position,
+            Constants.PRIORITY_PLANT,
+
+            0.6,     // smaller initial size
+
+            20.0,    // less nutrition
+
+            0.02,    // slower growth rate
+
+            1.2,     // smaller max size
+
+            180.0,   // spread MUCH slower
+
+            2.5      // smaller spread radius
         );
-        this.maxFruits = 5;
+
+        this.maxFruits = 3;
+
         this.fruitCount = 0;
+
         this.fruitGrowthTimer = 0;
-        this.fruitGrowthInterval = 15.0; // 15 giây mọc 1 quả
+
+        // quả mọc chậm hơn
+        this.fruitGrowthInterval = 40.0;
     }
 
     @Override
     public void update(double deltaTime, WorldMap worldMap) {
-        super.update(deltaTime, worldMap);
-        if (!alive || !mature) return;
 
-        // Mọc quả khi đã trưởng thành
-        fruitGrowthTimer += deltaTime;
-        if (fruitGrowthTimer >= fruitGrowthInterval && fruitCount < maxFruits) {
-            fruitCount++;
-            fruitGrowthTimer = 0;
-        }
+    super.update(deltaTime, worldMap);
+
+    if (!alive || !mature) {
+        return;
     }
+
+    // =========================================
+    // Winter death chance
+    // =========================================
+
+    
+
+    // =========================================
+    // Fruit growth
+    // =========================================
+
+    fruitGrowthTimer += deltaTime;
+
+    if (fruitGrowthTimer >= fruitGrowthInterval
+        && fruitCount < maxFruits) {
+
+        fruitCount++;
+
+        fruitGrowthTimer = 0;
+    }
+}
 
     /** Hái quả - trả về dinh dưỡng */
     public double harvestFruit() {

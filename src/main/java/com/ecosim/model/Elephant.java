@@ -46,6 +46,10 @@ public class Elephant extends Animal {
     }
 
     @Override
+    public Animal createOffspring() {
+        Vector2D offset = Vector2D.random(Constants.OFFSPRING_MAX_DISTANCE);
+        return new Elephant(position.add(offset));
+    }
     public void takeDamage(double damage) {
         // Voi miễn nhiễm với sát thương nhỏ (< 20)
         if (immuneToSmallAttacks && damage < 20) {

@@ -1,0 +1,194 @@
+/* ===== Wild-Life Eco Simulation - Global Styles ===== */
+
+/* Root */
+.root {
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-font-size: 12px;
+    -fx-background-color: #16213e;
+}
+
+/* ===== Toolbar ===== */
+.toolbar {
+    -fx-background-color: linear-gradient(to bottom, #1a1a3e, #0f3460);
+    -fx-border-color: #0f3460;
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 8 15 8 15;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.4), 5, 0, 0, 2);
+}
+
+/* ===== Primary Button ===== */
+.btn-primary {
+    -fx-background-color: linear-gradient(to bottom, #e94560, #c23152);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 16 6 16;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(233,69,96,0.3), 5, 0, 0, 1);
+}
+
+.btn-primary:hover {
+    -fx-background-color: linear-gradient(to bottom, #ff6b81, #e94560);
+    -fx-effect: dropshadow(three-pass-box, rgba(233,69,96,0.5), 8, 0, 0, 2);
+}
+
+.btn-primary:pressed {
+    -fx-background-color: #a12a42;
+}
+
+/* ===== ComboBox ===== */
+.combo-box {
+    -fx-background-color: #1a1a3e;
+    -fx-border-color: #533483;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-text-fill: white;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: white;
+    -fx-background-color: #1a1a3e;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #1a1a3e;
+    -fx-border-color: #533483;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: white;
+    -fx-background-color: #1a1a3e;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #533483;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #16213e, #0f3460);
+    -fx-border-color: #0f3460;
+    -fx-border-width: 0 0 0 2;
+    -fx-padding: 10;
+}
+
+/* ===== Status Bar ===== */
+.status-bar {
+    -fx-background-color: #0a0a23;
+    -fx-border-color: #16213e;
+    -fx-border-width: 2 0 0 0;
+    -fx-padding: 5 15 5 15;
+}
+
+/* ===== Radio Buttons ===== */
+.radio-button {
+    -fx-text-fill: #cccccc;
+}
+
+.radio-button .radio {
+    -fx-background-color: #1a1a3e;
+    -fx-border-color: #533483;
+}
+
+.radio-button:selected .radio {
+    -fx-background-color: #e94560;
+    -fx-border-color: #e94560;
+}
+
+.radio-button .dot {
+    -fx-background-color: transparent;
+}
+
+.radio-button:selected .dot {
+    -fx-background-color: white;
+}
+
+/* ===== Progress Bar ===== */
+.progress-bar {
+    -fx-background-color: #1a1a3e;
+    -fx-border-color: #333;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+}
+
+.progress-bar .bar {
+    -fx-background-color: #e94560;
+    -fx-background-radius: 3;
+    -fx-background-insets: 1;
+}
+
+.progress-bar .track {
+    -fx-background-color: #0a0a23;
+    -fx-background-radius: 3;
+}
+
+/* ===== Separator ===== */
+.separator .line {
+    -fx-border-color: rgba(255, 255, 255, 0.1);
+    -fx-border-width: 1 0 0 0;
+}
+
+/* ===== Context Menu ===== */
+.context-menu {
+    -fx-background-color: #1a1a3e;
+    -fx-border-color: #533483;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 10, 0, 0, 3);
+}
+
+.menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 5 15 5 15;
+}
+
+.menu-item .label {
+    -fx-text-fill: white;
+}
+
+.menu-item:hover {
+    -fx-background-color: #533483;
+}
+
+.menu-item:focused {
+    -fx-background-color: #533483;
+}
+
+/* ===== Tooltip ===== */
+.tooltip {
+    -fx-background-color: #16213e;
+    -fx-text-fill: white;
+    -fx-border-color: #533483;
+    -fx-border-radius: 3;
+    -fx-background-radius: 3;
+    -fx-font-size: 11px;
+}
+
+/* ===== Scrollbar ===== */
+.scroll-bar {
+    -fx-background-color: #16213e;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #533483;
+    -fx-background-radius: 3;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #e94560;
+}
+
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-shape: "";
+}

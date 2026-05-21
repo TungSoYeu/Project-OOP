@@ -26,6 +26,8 @@ public class SimulationEngine {
     private double speedMultiplier;
     private double totalTime;
 
+    /*update*/private Season previousSeason;
+
     public SimulationEngine() {
         this.worldMap = new WorldMap();
         this.entityManager = new EntityManager(worldMap);
@@ -33,7 +35,7 @@ public class SimulationEngine {
         this.running = false;
         this.speedMultiplier = 1.0;
         this.totalTime = 0;
-
+        /*update*/this.previousSeason = seasonManager.getCurrentSeason();
         // Spawn entities ban đầu
         entityManager.spawnInitialEntities();
     }
@@ -50,40 +52,79 @@ public class SimulationEngine {
         double adjustedDelta = deltaTime * speedMultiplier;
         totalTime += adjustedDelta;
 
-        // 1. Cập nhật mùa
+        // ===== 1. Update season =====
         seasonManager.update(adjustedDelta);
 
-        // 2. Cập nhật từng entity
+        Season currentSeason = seasonManager.getCurrentSeason();
+
+        // ===== 2. Spawn thêm thú vào đầu xuân =====
+        if (currentSeason == Season.SPRING &&
+            previousSeason != Season.SPRING) {
+
+            // Spawn tự nhiên
+            entityManager.spawnSeasonAnimals();
+
+            // Sinh sản
+            entityManager.processSpringReproduction();
+        }
+
+        // Save previous season
+        previousSeason = currentSeason;
+
+        // ===== 3. Maintain population =====
+        entityManager.maintainPopulation();
+
+        // ===== 4. Update entities =====
         List<Entity> entities = entityManager.getEntities();
+
         for (Entity entity : entities) {
+
             if (!entity.isAlive()) continue;
 
-            // Cập nhật cơ bản (nhu cầu sinh tồn)
+            // Biological update
             entity.update(adjustedDelta, worldMap);
 
-            // Nếu là Animal → quyết định hành động bằng Strategy
-            if (entity instanceof Animal animal && animal.isAlive()) {
+            // AI update
+            if (entity instanceof Animal animal &&
+                animal.isAlive()) {
+
                 SurvivalStrategy strategy = animal.getStrategy();
+
                 if (strategy != null) {
-                    List<Entity> nearby = entityManager.getNearby(animal, animal.getSightRange());
-                    Action action = strategy.decide(animal, nearby, worldMap);
-                    animal.executeAction(action, adjustedDelta, worldMap);
+
+                    List<Entity> nearby =
+                        entityManager.getNearby(
+                            animal,
+                            animal.getSightRange()
+                        );
+
+                    Action action =
+                        strategy.decide(
+                            animal,
+                            nearby,
+                            worldMap
+                        );
+
+                    animal.executeAction(
+                        action,
+                        adjustedDelta,
+                        worldMap
+                    );
                 }
             }
         }
 
-        // 3. Xử lý nhường đường
+        // ===== 5. Resolve movement =====
         entityManager.resolveMovementPriority();
 
-        // 4. Xử lý uống nước
+        // ===== 6. Water drinking =====
         entityManager.processWaterDrinking();
 
-        // 5. Kiểm tra chuyển đổi strategy
+        // ===== 7. Strategy switching =====
         entityManager.checkStrategySwitch();
 
-        // 6. Dọn dẹp & sinh sôi
-        entityManager.cleanup(seasonManager.getCurrentSeason());
-    }
+        // ===== 8. Cleanup =====
+        entityManager.cleanup(currentSeason);}
 
     // ===== Controls =====
 

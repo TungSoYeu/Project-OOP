@@ -25,7 +25,7 @@ public class Tiger extends Animal {
             position,                 // position
             Constants.PRIORITY_TIGER, // priority
             0.7,                      // size (lớn)
-            120.0,                    // maxHealth
+            1200.0,                    // maxHealth
             Constants.SPEED_TIGER,    // maxSpeed (chậm hơn sói)
             35.0,                     // attackPower (mạnh nhất)
             Constants.SIGHT_TIGER     // sightRange
@@ -98,6 +98,15 @@ public class Tiger extends Animal {
     @Override
     public String getTypeName() {
         return "Hổ";
+    }
+
+    /**
+     * Create a tiger offspring at a nearby position.
+     */
+    @Override
+    public Animal createOffspring() {
+        Vector2D offset = Vector2D.random(Constants.OFFSPRING_MAX_DISTANCE);
+        return new Tiger(position.add(offset));
     }
 
     public boolean isRoaring() {

@@ -22,7 +22,7 @@ public class Wolf extends Animal {
             position,                 // position
             Constants.PRIORITY_WOLF,  // priority
             0.5,                      // size
-            100.0,                    // maxHealth
+            1000.0,                    // maxHealth
             Constants.SPEED_WOLF,     // maxSpeed (nhanh nhất)
             25.0,                     // attackPower (mạnh)
             Constants.SIGHT_WOLF      // sightRange (xa nhất)
@@ -42,19 +42,39 @@ public class Wolf extends Animal {
 
     @Override
     protected void doAttack(Entity target, double deltaTime) {
-        if (target == null || !target.isAlive()) return;
+    if (target == null || !target.isAlive()) return;
 
-        double dist = distanceTo(target);
-        if (dist < 1.5) {
-            super.doAttack(target, deltaTime);
-        } else {
-            // Tăng tốc đuổi mồi
-            double originalSpeed = this.speed;
-            this.speed = this.maxSpeed * chaseSpeedMultiplier;
-            setState(AnimalState.RUNNING);
-            this.speed = originalSpeed;
+    double dist = distanceTo(target);
+
+    if (dist < 1.5) {
+
+        setState(AnimalState.ATTACKING);
+
+        if (target instanceof Animal prey) {
+
+            prey.takeDamage(attackPower * deltaTime);
+
+            // Nếu con mồi chết -> ăn ngay
+            if (!prey.isAlive()) {
+
+                // Tăng no bụng
+                hunger = Math.min(
+                    Constants.MAX_HUNGER,
+                    hunger + 40
+                );
+
+                // Hồi máu nhẹ
+                health = Math.min(
+                    maxHealth,
+                    health + 10
+                );
+            }
         }
+
+    } else {
+        setState(AnimalState.RUNNING);
     }
+    }   
 
     @Override
     public double getTerrainSpeedModifier(TerrainType terrain) {
@@ -78,6 +98,15 @@ public class Wolf extends Animal {
     @Override
     public String getTypeName() {
         return "Sói";
+    }
+
+    /**
+     * Create a wolf offspring at a nearby position.
+     */
+    @Override
+    public Animal createOffspring() {
+        Vector2D offset = Vector2D.random(Constants.OFFSPRING_MAX_DISTANCE);
+        return new Wolf(position.add(offset));
     }
 
     public double getChaseSpeedMultiplier() { return chaseSpeedMultiplier; }
