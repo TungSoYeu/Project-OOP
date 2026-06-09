@@ -22,7 +22,7 @@ public class Deer extends Animal {
             position,                 // position
             Constants.PRIORITY_DEER,  // priority
             0.5,                      // size (lớn hơn thỏ)
-            80.0,                     // maxHealth
+            800.0,                     // maxHealth
             Constants.SPEED_DEER,     // maxSpeed
             8.0,                      // attackPower (yếu, chỉ để tự vệ)
             Constants.SIGHT_DEER      // sightRange
@@ -71,4 +71,11 @@ public class Deer extends Animal {
     }
 
     public double getFleeSpeedMultiplier() { return fleeSpeedMultiplier; }
+    
+    @Override
+    public Animal createOffspring() {
+        Vector2D offset = Vector2D.random(Constants.OFFSPRING_MAX_DISTANCE);
+        return new Deer(position.add(offset));
+    }
 }
+

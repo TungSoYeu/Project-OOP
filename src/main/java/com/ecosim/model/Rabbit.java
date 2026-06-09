@@ -23,7 +23,7 @@ public class Rabbit extends Animal {
             position,                  // position
             Constants.PRIORITY_RABBIT, // priority
             0.3,                       // size
-            60.0,                      // maxHealth
+            300.0,                      // maxHealth
             Constants.SPEED_RABBIT,    // maxSpeed (nhanh)
             5.0,                       // attackPower (yếu)
             Constants.SIGHT_RABBIT     // sightRange
@@ -42,6 +42,10 @@ public class Rabbit extends Animal {
     }
 
     @Override
+    public Animal createOffspring() {
+        Vector2D offset = Vector2D.random(Constants.OFFSPRING_MAX_DISTANCE);
+        return new Rabbit(position.add(offset));
+    }
     public double getTerrainSpeedModifier(TerrainType terrain) {
         return switch (terrain) {
             case GRASSLAND -> 1.0;

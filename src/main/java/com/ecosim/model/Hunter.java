@@ -108,6 +108,15 @@ public class Hunter extends Animal {
         return "Thợ săn";
     }
 
+    /**
+     * Hunters are humans and do not reproduce in this simulation.
+     * The population is fixed at 1.
+     */
+    @Override
+    public Animal createOffspring() {
+        return null;
+    }
+
     public double getWeaponRange() {
         return weaponRange;
     }
