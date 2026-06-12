@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * Bản đồ thế giới - lưới 2D gồm các TerrainTile.
- * Kết hợp 3 vùng: Đồng cỏ, Rừng rậm, Hồ nước.
+ * 2D world map made of terrain tiles.
+ * The map keeps the same broad regions as before, but uses organic shapes.
  */
 public class WorldMap {
     private final int width;
@@ -28,143 +28,208 @@ public class WorldMap {
         this(Constants.MAP_WIDTH, Constants.MAP_HEIGHT);
     }
 
-    /**
-     * Tạo bản đồ mặc định với 3 vùng chính + vùng chuyển tiếp.
-     */
     private void generateDefaultMap() {
-        // Bước 1: Đặt mặc định tất cả là đồng cỏ
+        fillGrassland();
+        createOrganicForest();
+        createOrganicLake();
+        createPond(18, 25, 7, 5);
+        createPond(92, 63, 8, 4);
+        addMudAroundWater();
+        scatterRocks(30);
+        addBushBorders();
+    }
+
+    private void fillGrassland() {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 tiles[y][x] = new TerrainTile(TerrainType.GRASSLAND);
             }
         }
+    }
 
-        // Bước 2: Tạo vùng rừng rậm (bên phải, trên)
-        for (int y = Constants.FOREST_Y1; y < Math.min(Constants.FOREST_Y2, height); y++) {
-            for (int x = Constants.FOREST_X1; x < Math.min(Constants.FOREST_X2, width); x++) {
-                if (isInBounds(x, y)) {
-                    // Rừng có xác suất chứa bụi rậm xen kẽ
-                    if (random.nextDouble() < 0.15) {
-                        tiles[y][x] = new TerrainTile(TerrainType.BUSH);
-                    } else {
-                        tiles[y][x] = new TerrainTile(TerrainType.FOREST);
-                    }
+    private void createOrganicForest() {
+        double centerX = (Constants.FOREST_X1 + Constants.FOREST_X2) / 2.0;
+        double centerY = (Constants.FOREST_Y1 + Constants.FOREST_Y2) / 2.0;
+        double radiusX = (Constants.FOREST_X2 - Constants.FOREST_X1) / 2.0;
+        double radiusY = (Constants.FOREST_Y2 - Constants.FOREST_Y1) / 2.0;
+
+        int startX = Math.max(0, Constants.FOREST_X1 - 10);
+        int endX = Math.min(width, Constants.FOREST_X2 + 6);
+        int startY = Math.max(0, Constants.FOREST_Y1 - 8);
+        int endY = Math.min(height, Constants.FOREST_Y2 + 8);
+
+        for (int y = startY; y < endY; y++) {
+            for (int x = startX; x < endX; x++) {
+                double nx = (x - centerX) / radiusX;
+                double ny = (y - centerY) / radiusY;
+                double value = nx * nx + ny * ny + organicNoise(x, y, 0.18);
+
+                if (value < 1.03) {
+                    setTerrain(x, y, random.nextDouble() < 0.14 ? TerrainType.BUSH : TerrainType.FOREST);
+                } else if (value < 1.22 && random.nextDouble() < 0.42) {
+                    setTerrain(x, y, random.nextDouble() < 0.55 ? TerrainType.BUSH : TerrainType.FOREST);
+                }
+            }
+        }
+    }
+
+    private void createOrganicLake() {
+        double centerX = (Constants.LAKE_X1 + Constants.LAKE_X2) / 2.0;
+        double centerY = (Constants.LAKE_Y1 + Constants.LAKE_Y2) / 2.0;
+        double radiusX = (Constants.LAKE_X2 - Constants.LAKE_X1) / 2.0;
+        double radiusY = (Constants.LAKE_Y2 - Constants.LAKE_Y1) / 2.0;
+
+        int startX = Math.max(0, Constants.LAKE_X1 - 6);
+        int endX = Math.min(width, Constants.LAKE_X2 + 6);
+        int startY = Math.max(0, Constants.LAKE_Y1 - 5);
+        int endY = Math.min(height, Constants.LAKE_Y2 + 5);
+
+        for (int y = startY; y < endY; y++) {
+            for (int x = startX; x < endX; x++) {
+                double nx = (x - centerX) / radiusX;
+                double ny = (y - centerY) / radiusY;
+                double value = nx * nx + ny * ny + organicNoise(x + 31, y + 17, 0.20);
+
+                if (value < 0.78) {
+                    setTerrain(x, y, TerrainType.WATER);
+                } else if (value < 1.08) {
+                    setTerrain(x, y, TerrainType.MUD);
+                }
+            }
+        }
+    }
+
+    private void createPond(int centerX, int centerY, int radiusX, int radiusY) {
+        int startX = Math.max(0, centerX - radiusX - 2);
+        int endX = Math.min(width - 1, centerX + radiusX + 2);
+        int startY = Math.max(0, centerY - radiusY - 2);
+        int endY = Math.min(height - 1, centerY + radiusY + 2);
+
+        for (int y = startY; y <= endY; y++) {
+            for (int x = startX; x <= endX; x++) {
+                double nx = (x - centerX) / (double) radiusX;
+                double ny = (y - centerY) / (double) radiusY;
+                double value = nx * nx + ny * ny + organicNoise(x + centerX, y + centerY, 0.16);
+
+                if (value < 0.78) {
+                    setTerrain(x, y, TerrainType.WATER);
+                } else if (value < 1.08 && getTileAt(x, y).getType() != TerrainType.WATER) {
+                    setTerrain(x, y, TerrainType.MUD);
+                }
+            }
+        }
+    }
+
+    private void addMudAroundWater() {
+        List<int[]> mudTiles = new ArrayList<>();
+
+        for (int y = 1; y < height - 1; y++) {
+            for (int x = 1; x < width - 1; x++) {
+                if (tiles[y][x].getType() == TerrainType.GRASSLAND
+                    && hasAdjacentTerrain(x, y, TerrainType.WATER)) {
+
+                    mudTiles.add(new int[] {x, y});
                 }
             }
         }
 
-        // Bước 3: Tạo hồ nước (dưới giữa)
-        for (int y = Constants.LAKE_Y1; y < Math.min(Constants.LAKE_Y2, height); y++) {
-            for (int x = Constants.LAKE_X1; x < Math.min(Constants.LAKE_X2, width); x++) {
-                if (isInBounds(x, y)) {
-                    // Viền hồ có bùn
-                    if (isLakeEdge(x, y)) {
-                        tiles[y][x] = new TerrainTile(TerrainType.MUD);
-                    } else {
-                        tiles[y][x] = new TerrainTile(TerrainType.WATER);
-                    }
-                }
-            }
+        for (int[] tile : mudTiles) {
+            setTerrain(tile[0], tile[1], TerrainType.MUD);
         }
-
-        // Bước 4: Rải một số vách đá ngẫu nhiên
-        scatterRocks(30);
-
-        // Bước 5: Thêm bụi rậm quanh rìa rừng và đồng cỏ
-        addBushBorders();
     }
 
-    /** Kiểm tra có phải viền hồ không */
-    private boolean isLakeEdge(int x, int y) {
-        int margin = 2;
-        return x < Constants.LAKE_X1 + margin || x >= Constants.LAKE_X2 - margin
-            || y < Constants.LAKE_Y1 + margin || y >= Constants.LAKE_Y2 - margin;
-    }
-
-    /** Rải đá ngẫu nhiên trên bản đồ */
     private void scatterRocks(int count) {
         for (int i = 0; i < count; i++) {
             int x = random.nextInt(width);
             int y = random.nextInt(height);
             if (tiles[y][x].getType() == TerrainType.GRASSLAND) {
-                tiles[y][x] = new TerrainTile(TerrainType.ROCK);
-                // Tạo cụm đá nhỏ (1-3 tile)
+                setTerrain(x, y, TerrainType.ROCK);
+
                 int clusterSize = random.nextInt(3);
                 for (int j = 0; j < clusterSize; j++) {
                     int nx = x + random.nextInt(3) - 1;
                     int ny = y + random.nextInt(3) - 1;
                     if (isInBounds(nx, ny) && tiles[ny][nx].getType() == TerrainType.GRASSLAND) {
-                        tiles[ny][nx] = new TerrainTile(TerrainType.ROCK);
+                        setTerrain(nx, ny, TerrainType.ROCK);
                     }
                 }
             }
         }
     }
 
-    /** Thêm bụi rậm ở ranh giới rừng/đồng cỏ */
     private void addBushBorders() {
         for (int y = 1; y < height - 1; y++) {
             for (int x = 1; x < width - 1; x++) {
                 if (tiles[y][x].getType() == TerrainType.GRASSLAND && hasAdjacentForest(x, y)) {
-                    if (random.nextDouble() < 0.3) {
-                        tiles[y][x] = new TerrainTile(TerrainType.BUSH);
+                    if (random.nextDouble() < 0.38) {
+                        setTerrain(x, y, TerrainType.BUSH);
                     }
                 }
             }
         }
     }
 
-    /** Kiểm tra xem ô có nằm cạnh rừng không */
     private boolean hasAdjacentForest(int x, int y) {
-        int[][] dirs = {{-1,0},{1,0},{0,-1},{0,1}};
-        for (int[] d : dirs) {
-            int nx = x + d[0], ny = y + d[1];
-            if (isInBounds(nx, ny) && tiles[ny][nx].getType() == TerrainType.FOREST) {
-                return true;
+        return hasAdjacentTerrain(x, y, TerrainType.FOREST);
+    }
+
+    private boolean hasAdjacentTerrain(int x, int y, TerrainType type) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) continue;
+                int nx = x + dx;
+                int ny = y + dy;
+                if (isInBounds(nx, ny) && tiles[ny][nx].getType() == type) {
+                    return true;
+                }
             }
         }
+
         return false;
     }
 
-    // ===== Public API =====
+    private double organicNoise(int x, int y, double amount) {
+        double wave = Math.sin(x * 0.23) * 0.5 + Math.cos(y * 0.19) * 0.5;
+        double hash = ((x * 928371 + y * 12377) & 0xFF) / 255.0 - 0.5;
+        return (wave * 0.5 + hash) * amount;
+    }
 
-    /** Lấy tile tại tọa độ (tile index) */
+    private void setTerrain(int x, int y, TerrainType type) {
+        if (isInBounds(x, y)) {
+            tiles[y][x] = new TerrainTile(type);
+        }
+    }
+
     public TerrainTile getTileAt(int x, int y) {
         if (!isInBounds(x, y)) return null;
         return tiles[y][x];
     }
 
-    /** Lấy loại terrain tại tọa độ thế giới (double) */
     public TerrainType getTerrainAt(double worldX, double worldY) {
         int tx = (int) Math.floor(worldX);
         int ty = (int) Math.floor(worldY);
-        if (!isInBounds(tx, ty)) return TerrainType.ROCK; // Ngoài bản đồ = không đi được
+        if (!isInBounds(tx, ty)) return TerrainType.ROCK;
         return tiles[ty][tx].getType();
     }
 
-    /** Kiểm tra tọa độ có nằm trong bản đồ */
     public boolean isInBounds(int x, int y) {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    /** Kiểm tra tọa độ thế giới có nằm trong bản đồ */
     public boolean isInBounds(double worldX, double worldY) {
         return worldX >= 0 && worldX < width && worldY >= 0 && worldY < height;
     }
 
-    /** Đặt loại terrain tại vị trí (dùng cho user interaction) */
     public void setTerrainAt(int x, int y, TerrainType type) {
         if (isInBounds(x, y)) {
             tiles[y][x].setType(type);
         }
     }
 
-    /** Tìm vị trí nguồn nước gần nhất từ vị trí cho trước */
     public Vector2D findNearestWater(Vector2D from) {
         double minDist = Double.MAX_VALUE;
         Vector2D nearest = null;
 
-        // Scan theo vòng tròn mở rộng
         int cx = from.getTileX();
         int cy = from.getTileY();
         int maxRadius = Math.max(width, height);
@@ -172,8 +237,9 @@ public class WorldMap {
         for (int r = 1; r < maxRadius; r++) {
             for (int dy = -r; dy <= r; dy++) {
                 for (int dx = -r; dx <= r; dx++) {
-                    if (Math.abs(dx) != r && Math.abs(dy) != r) continue; // Chỉ xét viền
-                    int tx = cx + dx, ty = cy + dy;
+                    if (Math.abs(dx) != r && Math.abs(dy) != r) continue;
+                    int tx = cx + dx;
+                    int ty = cy + dy;
                     if (isInBounds(tx, ty) && tiles[ty][tx].getType() == TerrainType.WATER) {
                         Vector2D waterPos = new Vector2D(tx + 0.5, ty + 0.5);
                         double dist = from.distanceTo(waterPos);
@@ -184,25 +250,25 @@ public class WorldMap {
                     }
                 }
             }
-            if (nearest != null) break; // Tìm thấy ở vòng hiện tại thì dừng
+            if (nearest != null) break;
         }
         return nearest;
     }
 
-    /** Tìm vị trí bụi rậm/rừng gần nhất (để trốn) */
     public Vector2D findNearestHidingSpot(Vector2D from) {
         double minDist = Double.MAX_VALUE;
         Vector2D nearest = null;
 
         int cx = from.getTileX();
         int cy = from.getTileY();
-        int maxRadius = 20; // Tìm trong bán kính 20 tile
+        int maxRadius = 20;
 
         for (int r = 1; r < maxRadius; r++) {
             for (int dy = -r; dy <= r; dy++) {
                 for (int dx = -r; dx <= r; dx++) {
                     if (Math.abs(dx) != r && Math.abs(dy) != r) continue;
-                    int tx = cx + dx, ty = cy + dy;
+                    int tx = cx + dx;
+                    int ty = cy + dy;
                     if (isInBounds(tx, ty)) {
                         TerrainType t = tiles[ty][tx].getType();
                         if (t == TerrainType.BUSH || t == TerrainType.FOREST) {
@@ -221,7 +287,6 @@ public class WorldMap {
         return nearest;
     }
 
-    /** Tìm vị trí ngẫu nhiên trên loại terrain chỉ định */
     public Vector2D getRandomPosition(TerrainType type) {
         List<Vector2D> candidates = new ArrayList<>();
         for (int y = 0; y < height; y++) {
@@ -235,7 +300,6 @@ public class WorldMap {
         return candidates.get(random.nextInt(candidates.size()));
     }
 
-    /** Tìm vị trí ngẫu nhiên có thể đi được */
     public Vector2D getRandomTraversablePosition() {
         for (int attempt = 0; attempt < 1000; attempt++) {
             int x = random.nextInt(width);
