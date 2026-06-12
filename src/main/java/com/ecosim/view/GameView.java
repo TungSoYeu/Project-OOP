@@ -17,6 +17,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,7 @@ public class GameView extends BorderPane {
     private boolean isDragging;
     private String currentTool = "select"; // "select", "grass", "rock", "spawn"
     private String spawnType = "";
+    private final List<DamageText> damageTexts;
 
     // FPS tracking
     private long lastFrameTime;
@@ -62,6 +64,7 @@ public class GameView extends BorderPane {
         this.engine = engine;
         this.camera = new Camera(900, 600);
         this.renderer = new BasicRenderer();
+        this.damageTexts = new ArrayList<>();
 
         // Canvas setup
         this.canvas = new Canvas(900, 600);
@@ -487,6 +490,8 @@ public class GameView extends BorderPane {
 
                 // Update simulation
                 engine.tick(deltaTime);
+                collectDamageTexts();
+                updateDamageTexts(deltaTime);
 
                 // Render
                 render();
@@ -540,12 +545,34 @@ public class GameView extends BorderPane {
         }
 
         // Vẽ mini grid khi zoom thấp
+        drawDamageTexts(gc);
+
         if (camera.getZoom() < 0.5) {
             drawMiniGrid(gc);
         }
 
         // Vẽ tool cursor
         drawToolCursor(gc);
+    }
+
+    private void collectDamageTexts() {
+        for (DamageEvent event : engine.getEntityManager().consumeDamageEvents()) {
+            damageTexts.add(new DamageText(event.getPosition(), event.getDamage()));
+        }
+    }
+
+    private void updateDamageTexts(double deltaTime) {
+        for (DamageText damageText : damageTexts) {
+            damageText.update(deltaTime);
+        }
+
+        damageTexts.removeIf(DamageText::isExpired);
+    }
+
+    private void drawDamageTexts(GraphicsContext gc) {
+        for (DamageText damageText : damageTexts) {
+            damageText.draw(gc, camera);
+        }
     }
 
     private void drawMiniGrid(GraphicsContext gc) {

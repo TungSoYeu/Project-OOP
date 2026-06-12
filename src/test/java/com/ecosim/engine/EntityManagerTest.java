@@ -1,6 +1,7 @@
 package com.ecosim.engine;
 
 import com.ecosim.model.Deer;
+import com.ecosim.model.DamageEvent;
 import com.ecosim.model.Elephant;
 import com.ecosim.model.FruitTree;
 import com.ecosim.model.Grass;
@@ -120,6 +121,41 @@ class EntityManagerTest {
         entityManager.cleanup(Season.SPRING);
 
         assertEquals(1, entityManager.countEntities(Grass.class));
+    }
+
+    @Test
+    void cleanupCollectsDamageEventsBeforeRemovingDeadAnimals() {
+        EntityManager entityManager = new EntityManager(new WorldMap());
+        Rabbit rabbit = new Rabbit(new Vector2D(10.5, 10.5));
+        entityManager.addEntity(rabbit);
+
+        rabbit.takeDamage(rabbit.getMaxHealth());
+        entityManager.cleanup(Season.SPRING);
+
+        assertEquals(0, entityManager.countEntities(Rabbit.class));
+        DamageEvent event = entityManager.consumeDamageEvents().get(0);
+        assertEquals(rabbit.getMaxHealth(), event.getDamage());
+        assertEquals(rabbit.getPosition(), event.getPosition());
+    }
+
+    @Test
+    void repeatedSmallDamageIsMergedIntoOneDamageEvent() {
+        WorldMap worldMap = new WorldMap();
+        EntityManager entityManager = new EntityManager(worldMap);
+        Rabbit rabbit = new Rabbit(new Vector2D(10.5, 10.5));
+        entityManager.addEntity(rabbit);
+
+        rabbit.takeDamage(0.4);
+        rabbit.takeDamage(0.6);
+        entityManager.cleanup(Season.SPRING);
+
+        assertTrue(entityManager.consumeDamageEvents().isEmpty());
+
+        rabbit.update(0.35, worldMap);
+        entityManager.cleanup(Season.SPRING);
+
+        DamageEvent event = entityManager.consumeDamageEvents().get(0);
+        assertEquals(1.0, event.getDamage());
     }
 
     @Test
