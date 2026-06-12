@@ -30,6 +30,7 @@ public abstract class Plant extends Entity {
 
     /** Bán kính lan rộng khi sinh sôi (tiles) */
     protected double spreadRadius;
+    protected double growthMultiplier;
 
     protected final Random random = new Random();
 
@@ -44,6 +45,7 @@ public abstract class Plant extends Entity {
         this.timeSinceLastSpread = 0;
         this.spreadInterval = spreadInterval;
         this.spreadRadius = spreadRadius;
+        this.growthMultiplier = 1.0;
     }
 
     @Override
@@ -55,7 +57,7 @@ public abstract class Plant extends Entity {
     /** Phát triển theo thời gian */
     protected void grow(double deltaTime) {
         if (size < maxSize) {
-            size += growthRate * deltaTime;
+            size += growthRate * growthMultiplier * deltaTime;
             if (size >= maxSize) {
                 size = maxSize;
                 mature = true;
@@ -128,4 +130,7 @@ public abstract class Plant extends Entity {
     public double getMaxSize() { return maxSize; }
     public boolean isMature() { return mature; }
     public double getSpreadRadius() { return spreadRadius; }
+    public void setGrowthMultiplier(double growthMultiplier) {
+        this.growthMultiplier = Math.max(0, growthMultiplier);
+    }
 }

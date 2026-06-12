@@ -27,6 +27,7 @@ public class EntityManager {
     private final List<DamageEvent> pendingDamageEvents;
     private final WorldMap worldMap;
     private final Random random;
+    private double seasonalPressureTimer;
 
     public EntityManager(WorldMap worldMap) {
 
@@ -34,6 +35,7 @@ public class EntityManager {
         this.entities = new CopyOnWriteArrayList<>();
         this.pendingDamageEvents = new ArrayList<>();
         this.random = new Random();
+        this.seasonalPressureTimer = 0;
     }
 
     // =========================================================
@@ -154,6 +156,10 @@ public class EntityManager {
     // =========================================================
 
     public void processSpringReproduction() {
+        processSpringReproduction(1.0);
+    }
+
+    public void processSpringReproduction(double chanceMultiplier) {
 
         List<Entity> newborns = new ArrayList<>();
 
@@ -171,7 +177,11 @@ public class EntityManager {
                 continue;
             }
 
-            if (random.nextDouble() < Constants.REPRODUCTION_CHANCE) {
+            double chance =
+                Constants.REPRODUCTION_CHANCE
+                    * Math.max(0, chanceMultiplier);
+
+            if (random.nextDouble() < chance) {
 
                 Animal baby =
                     AnimalReproductionFactory.createOffspring(
@@ -196,6 +206,10 @@ public class EntityManager {
     // =========================================================
 
     public void cleanup(Season currentSeason) {
+        cleanup(currentSeason, SeasonEffect.forSeason(currentSeason));
+    }
+
+    public void cleanup(Season currentSeason, SeasonEffect effect) {
 
         collectDamageEvents();
 
@@ -229,13 +243,7 @@ public class EntityManager {
 
                     double chance;
 
-                    switch (currentSeason) {
-                        case SPRING -> chance = 0.03;
-                        case SUMMER -> chance = 0.015;
-                        case AUTUMN -> chance = 0.005;  
-                        case WINTER -> chance = 0.0;
-                        default -> chance = 0.05;
-                    }
+                    chance = effect.getPlantSpreadChance();
 
                     if (random.nextDouble() < chance) {
 
@@ -250,6 +258,50 @@ public class EntityManager {
         }
 
         entities.addAll(newPlants);
+        entities.removeIf(e -> !e.isAlive());
+    }
+
+    public void applySeasonalPressure(
+        Season currentSeason,
+        SeasonEffect effect,
+        double deltaTime
+    ) {
+
+        if (!effect.isHarshForPlants()) {
+            seasonalPressureTimer = 0;
+            return;
+        }
+
+        seasonalPressureTimer += deltaTime;
+        if (seasonalPressureTimer < 1.0) {
+            return;
+        }
+
+        seasonalPressureTimer = 0;
+
+        for (Entity entity : entities) {
+            if (!entity.isAlive()) {
+                continue;
+            }
+
+            if (currentSeason == Season.WINTER && entity instanceof Grass grass) {
+                if (random.nextDouble() < 0.015) {
+                    grass.setAlive(false);
+                }
+            } else if (currentSeason == Season.WINTER && entity instanceof FruitTree tree) {
+                if (random.nextDouble() < 0.006) {
+                    tree.setAlive(false);
+                }
+            } else if (currentSeason == Season.SUMMER
+                && entity instanceof Grass grass
+                && !isNearWater(grass.getPosition(), 4)) {
+
+                if (random.nextDouble() < 0.02) {
+                    grass.setAlive(false);
+                }
+            }
+        }
+
         entities.removeIf(e -> !e.isAlive());
     }
 
@@ -511,6 +563,23 @@ public class EntityManager {
             );
 
         return currentCount < maxAllowed;
+    }
+
+    private boolean isNearWater(Vector2D position, int radius) {
+        int cx = position.getTileX();
+        int cy = position.getTileY();
+
+        for (int dy = -radius; dy <= radius; dy++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                if (worldMap.getTerrainAt(cx + dx, cy + dy)
+                    == TerrainType.WATER) {
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private void collectDamageEvents() {

@@ -56,6 +56,7 @@ public class SimulationEngine {
         seasonManager.update(adjustedDelta);
 
         Season currentSeason = seasonManager.getCurrentSeason();
+        SeasonEffect seasonEffect = SeasonEffect.forSeason(currentSeason);
 
         // ===== 2. Spawn thêm thú vào đầu xuân =====
         if (currentSeason == Season.SPRING &&
@@ -65,7 +66,9 @@ public class SimulationEngine {
             entityManager.spawnSeasonAnimals();
 
             // Sinh sản
-            entityManager.processSpringReproduction();
+            entityManager.processSpringReproduction(
+                seasonEffect.getReproductionChanceMultiplier()
+            );
         }
 
         // Save previous season
@@ -73,6 +76,11 @@ public class SimulationEngine {
 
         // ===== 3. Maintain population =====
         entityManager.maintainPopulation();
+        entityManager.applySeasonalPressure(
+            currentSeason,
+            seasonEffect,
+            adjustedDelta
+        );
 
         // ===== 4. Update entities =====
         List<Entity> entities = entityManager.getEntities();
@@ -80,6 +88,8 @@ public class SimulationEngine {
         for (Entity entity : entities) {
 
             if (!entity.isAlive()) continue;
+
+            applySeasonEffect(entity, seasonEffect);
 
             // Biological update
             entity.update(adjustedDelta, worldMap);
@@ -124,7 +134,26 @@ public class SimulationEngine {
         entityManager.checkStrategySwitch();
 
         // ===== 8. Cleanup =====
-        entityManager.cleanup(currentSeason);}
+        entityManager.cleanup(currentSeason, seasonEffect);}
+
+    private void applySeasonEffect(Entity entity, SeasonEffect effect) {
+        if (entity instanceof Animal animal) {
+            animal.setNeedDecayMultipliers(
+                effect.getHungerDecayMultiplier(),
+                effect.getThirstDecayMultiplier()
+            );
+        }
+
+        if (entity instanceof Plant plant) {
+            plant.setGrowthMultiplier(effect.getPlantGrowthMultiplier());
+        }
+
+        if (entity instanceof FruitTree fruitTree) {
+            fruitTree.setFruitGrowthMultiplier(
+                effect.getFruitGrowthMultiplier()
+            );
+        }
+    }
 
     // ===== Controls =====
 

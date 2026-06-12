@@ -166,4 +166,23 @@ class EntityManagerTest {
 
         assertTrue(entityManager.countEntities(FruitTree.class) > 0);
     }
+
+    @Test
+    void winterSeasonEffectStopsFruitGrowth() {
+        FruitTree tree = new FruitTree(new Vector2D(60.5, 10.5));
+
+        tree.setFruitGrowthMultiplier(
+            SeasonEffect.forSeason(Season.WINTER).getFruitGrowthMultiplier()
+        );
+
+        assertEquals(0.0, SeasonEffect.forSeason(Season.WINTER).getFruitGrowthMultiplier());
+    }
+
+    @Test
+    void summerSeasonEffectMakesThirstDecayFaster() {
+        assertTrue(
+            SeasonEffect.forSeason(Season.SUMMER).getThirstDecayMultiplier()
+                > SeasonEffect.forSeason(Season.SPRING).getThirstDecayMultiplier()
+        );
+    }
 }
