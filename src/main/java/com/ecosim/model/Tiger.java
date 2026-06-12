@@ -84,7 +84,7 @@ public class Tiger extends Animal {
         return switch (terrain) {
             case GRASSLAND -> 0.8;  // Hổ thích rừng hơn
             case FOREST -> 1.0;      // Di chuyển nhanh nhất trong rừng
-            case BUSH -> 0.7;        // Hổ to nhưng vẫn lọt qua bụi
+            case BUSH -> 0.0;
             case MUD -> 0.3;
             case WATER, ROCK -> 0.0;
         };
@@ -92,7 +92,9 @@ public class Tiger extends Animal {
 
     @Override
     public boolean canTraverse(TerrainType terrain) {
-        return terrain != TerrainType.WATER && terrain != TerrainType.ROCK;
+        return terrain != TerrainType.WATER
+            && terrain != TerrainType.ROCK
+            && terrain != TerrainType.BUSH;
     }
 
     @Override

@@ -92,7 +92,7 @@ public class Hunter extends Animal {
         return switch (terrain) {
             case GRASSLAND -> 1.0;
             case FOREST -> 0.6;
-            case BUSH -> 0.5;
+            case BUSH -> 0.0;
             case MUD -> 0.4;
             case WATER, ROCK -> 0.0;
         };
@@ -100,7 +100,9 @@ public class Hunter extends Animal {
 
     @Override
     public boolean canTraverse(TerrainType terrain) {
-        return terrain != TerrainType.WATER && terrain != TerrainType.ROCK;
+        return terrain != TerrainType.WATER
+            && terrain != TerrainType.ROCK
+            && terrain != TerrainType.BUSH;
     }
 
     @Override

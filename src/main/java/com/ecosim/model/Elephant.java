@@ -64,7 +64,7 @@ public class Elephant extends Animal {
         return switch (terrain) {
             case GRASSLAND -> 1.0;
             case FOREST -> 0.5;    // Voi rất to, khó đi trong rừng
-            case BUSH -> 0.8;       // Voi giẫm bẹp bụi rậm
+            case BUSH -> 0.0;
             case MUD -> 0.3;
             case WATER -> 0.6;      // Voi có thể qua nước nông
             case ROCK -> 0.0;
@@ -73,8 +73,8 @@ public class Elephant extends Animal {
 
     @Override
     public boolean canTraverse(TerrainType terrain) {
-        // Voi đi được hầu hết nơi, kể cả nước nông
-        return terrain != TerrainType.ROCK;
+        return terrain != TerrainType.ROCK
+            && terrain != TerrainType.BUSH;
     }
 
     @Override

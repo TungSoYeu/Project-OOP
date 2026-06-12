@@ -18,6 +18,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class EntityManager {
 
+    private static final int PLANT_SPAWN_ATTEMPTS = 120;
+    private static final double GRASS_MIN_SPACING = 0.8;
+    private static final double FRUIT_TREE_MIN_SPACING = 3.0;
+    private static final int MAX_PLANTS = 180;
+
     private final List<Entity> entities;
     private final WorldMap worldMap;
     private final Random random;
@@ -38,11 +43,11 @@ public class EntityManager {
         // ===== Plants =====
 
         for (int i = 0; i < 120; i++) {
-            addEntity(new Grass(randomGrasslandPos()));
+            spawnGrass();
         }
 
         for (int i = 0; i < 30; i++) {
-            addEntity(new FruitTree(randomForestPos()));
+            spawnFruitTree();
         }
 
         // ===== Herbivores =====
@@ -92,7 +97,11 @@ public class EntityManager {
         }
 
         for (int i = 0; i < 20; i++) {
-            addEntity(new Grass(randomGrasslandPos()));
+            spawnGrass();
+        }
+
+        for (int i = 0; i < 10; i++) {
+            spawnFruitTree();
         }
     }
 
@@ -126,7 +135,14 @@ public class EntityManager {
         if (countEntities(Grass.class) < 80) {
 
             for (int i = 0; i < 30; i++) {
-                addEntity(new Grass(randomGrasslandPos()));
+                spawnGrass();
+            }
+        }
+
+        if (countEntities(FruitTree.class) < 15) {
+
+            for (int i = 0; i < 8; i++) {
+                spawnFruitTree();
             }
         }
     }
@@ -186,36 +202,26 @@ public class EntityManager {
         List<Entity> newPlants = new ArrayList<>();
 
         for (Entity entity : entities) {
-            if (currentSeason == Season.WINTER
-            && entity instanceof FruitTree) {
-
-            // 1% cây chết vào mùa đông
-            if (random.nextDouble() < 0.03) {
-
-                entity.setAlive(false);
-                continue;
-        }
-        }
             if (entity instanceof Plant plant) {
 
+                if (!plant.canSpread()) {
+                    continue;
+                }
+
+                long plantCount =
+                    entities.stream()
+                        .filter(e -> e instanceof Plant)
+                        .count()
+                    + newPlants.size();
+
+                if (plantCount >= MAX_PLANTS) {
+                    break;
+                }
+
                 Vector2D spawnPos =
-                    plant.getSpreadPosition();
+                    findSpreadPositionFor(plant);
 
-                TerrainType terrain =
-                    worldMap.getTerrainAt(
-                        spawnPos.getX(),
-                        spawnPos.getY()
-                    );
-                    long plantCount =
-                        entities.stream()
-                            .filter(e -> e instanceof Plant)
-                            .count();
-
-                    if (plantCount > 180) {
-                        return;
-}      
-                if (terrain == TerrainType.GRASSLAND ||
-                    terrain == TerrainType.FOREST) {
+                if (spawnPos != null) {
 
                     double chance;
 
@@ -232,28 +238,15 @@ public class EntityManager {
                         newPlants.add(
                             plant.createOffspring(spawnPos)
                         );
+
+                        plant.resetSpreadTimer();
                     }
                 }
             }
         }
 
         entities.addAll(newPlants);
-        entities.removeIf(e -> !e.isAlive());   
-        // Limit grass
-        long grassCount =
-            entities.stream()
-                .filter(e -> e instanceof Grass)
-                .count();   
-
-        if (grassCount > 80) {
-
-            entities.stream()
-                .filter(e -> e instanceof Grass)
-                .skip(60)
-                .forEach(e -> e.setAlive(false));
-
-            entities.removeIf(e -> !e.isAlive());
-        }
+        entities.removeIf(e -> !e.isAlive());
     }
 
     // =========================================================
@@ -358,6 +351,24 @@ public class EntityManager {
 
                 if (dist < minDist && dist > 0.01) {
 
+                    if (canOverlap(a, b)) {
+                        continue;
+                    }
+
+                    if (a instanceof Plant && b instanceof Plant) {
+                        continue;
+                    }
+
+                    if (a instanceof Plant) {
+                        pushEntityAway(b, a, minDist - dist + 0.1);
+                        continue;
+                    }
+
+                    if (b instanceof Plant) {
+                        pushEntityAway(a, b, minDist - dist + 0.1);
+                        continue;
+                    }
+
                     Entity higher =
                         a.getPriority() >= b.getPriority()
                             ? a
@@ -391,6 +402,50 @@ public class EntityManager {
 
     public void addEntity(Entity entity) {
         entities.add(entity);
+    }
+
+    public boolean addGrassAt(Vector2D position) {
+        if (!canPlantGrassOn(position)) {
+            return false;
+        }
+
+        addEntity(new Grass(position));
+        return true;
+    }
+
+    public boolean addFruitTreeAt(Vector2D position) {
+        if (!isValidPlantPosition(
+            position,
+            TerrainType.FOREST,
+            FRUIT_TREE_MIN_SPACING
+        )) {
+            return false;
+        }
+
+        addEntity(new FruitTree(position));
+        return true;
+    }
+
+    private void spawnGrass() {
+        Vector2D pos = findPlantSpawnPosition(
+            TerrainType.GRASSLAND,
+            GRASS_MIN_SPACING
+        );
+
+        if (pos != null) {
+            addEntity(new Grass(pos));
+        }
+    }
+
+    private void spawnFruitTree() {
+        Vector2D pos = findPlantSpawnPosition(
+            TerrainType.FOREST,
+            FRUIT_TREE_MIN_SPACING
+        );
+
+        if (pos != null) {
+            addEntity(new FruitTree(pos));
+        }
     }
 
     public List<Entity> getNearby(Entity center, double radius) {
@@ -465,6 +520,132 @@ public class EntityManager {
 
             default -> 0;
         };
+    }
+
+    private boolean canOverlap(Entity a, Entity b) {
+        return isRabbitGrassPair(a, b);
+    }
+
+    private boolean isRabbitGrassPair(Entity a, Entity b) {
+        return (a instanceof Rabbit && b instanceof Grass)
+            || (a instanceof Grass && b instanceof Rabbit);
+    }
+
+    private void pushEntityAway(Entity entity, Entity fixed, double pushDist) {
+        if (entity instanceof Plant) {
+            return;
+        }
+
+        Vector2D pushDir =
+            fixed.getPosition()
+                .directionTo(entity.getPosition());
+
+        if (pushDir.magnitude() == 0) {
+            pushDir = Vector2D.randomDirection();
+        }
+
+        Vector2D newPos =
+            entity.getPosition()
+                .add(pushDir.multiply(pushDist));
+
+        if (worldMap.isInBounds(newPos.getX(), newPos.getY())) {
+            entity.setPosition(newPos);
+        }
+    }
+
+    private Vector2D findPlantSpawnPosition(
+        TerrainType terrain,
+        double minSpacing
+    ) {
+
+        for (int attempt = 0; attempt < PLANT_SPAWN_ATTEMPTS; attempt++) {
+            Vector2D candidate =
+                terrain == TerrainType.FOREST
+                    ? randomForestPos()
+                    : randomGrasslandPos();
+
+            if (isValidPlantPosition(candidate, terrain, minSpacing)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private Vector2D findSpreadPositionFor(Plant plant) {
+        TerrainType targetTerrain =
+            plant instanceof FruitTree
+                ? TerrainType.FOREST
+                : null;
+
+        double minSpacing =
+            plant instanceof FruitTree
+                ? FRUIT_TREE_MIN_SPACING
+                : GRASS_MIN_SPACING;
+
+        for (int attempt = 0; attempt < PLANT_SPAWN_ATTEMPTS; attempt++) {
+            Vector2D candidate = plant.getSpreadPosition();
+
+            boolean validPosition =
+                plant instanceof FruitTree
+                    ? isValidPlantPosition(candidate, targetTerrain, minSpacing)
+                    : isValidGrassPosition(candidate);
+
+            if (validPosition) {
+                return candidate;
+            }
+        }
+
+        plant.resetSpreadTimer();
+        return null;
+    }
+
+    private boolean isValidPlantPosition(
+        Vector2D position,
+        TerrainType terrain,
+        double minSpacing
+    ) {
+
+        if (!worldMap.isInBounds(position.getX(), position.getY())) {
+            return false;
+        }
+
+        if (worldMap.getTerrainAt(position.getX(), position.getY()) != terrain) {
+            return false;
+        }
+
+        for (Entity entity : entities) {
+            if (!entity.isAlive()) {
+                continue;
+            }
+
+            double minDistance =
+                entity instanceof Plant
+                    ? minSpacing
+                    : entity.getSize() + minSpacing;
+
+            if (entity.getPosition().distanceTo(position) < minDistance) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean isValidGrassPosition(Vector2D position) {
+        TerrainType terrain =
+            worldMap.getTerrainAt(position.getX(), position.getY());
+
+        return canPlantGrassOn(position)
+            && isValidPlantPosition(position, terrain, GRASS_MIN_SPACING);
+    }
+
+    private boolean canPlantGrassOn(Vector2D position) {
+        TerrainType terrain =
+            worldMap.getTerrainAt(position.getX(), position.getY());
+
+        return terrain == TerrainType.GRASSLAND
+            || terrain == TerrainType.FOREST;
     }
 
     private Vector2D randomGrasslandPos() {
