@@ -143,10 +143,9 @@ public class SimulationEngine {
 
     /** Gieo mầm cỏ tại vị trí click */
     public void plantGrass(double worldX, double worldY) {
-        TerrainType terrain = worldMap.getTerrainAt(worldX, worldY);
-        if (terrain == TerrainType.GRASSLAND || terrain == TerrainType.FOREST) {
-            entityManager.addEntity(new Grass(new com.ecosim.util.Vector2D(worldX, worldY)));
-        }
+        entityManager.addGrassAt(
+            new com.ecosim.util.Vector2D(worldX, worldY)
+        );
     }
 
     /** Đặt vách đá tại vị trí click */
@@ -164,8 +163,8 @@ public class SimulationEngine {
             case "Hổ" -> entityManager.addEntity(new Tiger(pos));
             case "Thợ săn" -> entityManager.addEntity(new Hunter(pos));
             case "Voi" -> entityManager.addEntity(new Elephant(pos));
-            case "Cỏ" -> entityManager.addEntity(new Grass(pos));
-            case "Cây ăn quả" -> entityManager.addEntity(new FruitTree(pos));
+            case "Cỏ" -> entityManager.addGrassAt(pos);
+            case "Cây ăn quả" -> entityManager.addFruitTreeAt(pos);
         }
     }
 
