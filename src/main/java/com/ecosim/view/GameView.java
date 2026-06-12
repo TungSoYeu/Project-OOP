@@ -524,6 +524,7 @@ public class GameView extends BorderPane {
 
         // Vẽ terrain
         renderer.renderTerrain(gc, engine.getWorldMap(), camera);
+        drawSeasonOverlay(gc, w, h);
 
         // Vẽ entities
         List<Entity> entities = engine.getEntityManager().getEntities();
@@ -573,6 +574,19 @@ public class GameView extends BorderPane {
         for (DamageText damageText : damageTexts) {
             damageText.draw(gc, camera);
         }
+    }
+
+    private void drawSeasonOverlay(GraphicsContext gc, double width, double height) {
+        Season season = engine.getSeasonManager().getCurrentSeason();
+        Color overlay = switch (season) {
+            case SPRING -> Color.rgb(150, 255, 180, 0.05);
+            case SUMMER -> Color.rgb(255, 205, 80, 0.09);
+            case AUTUMN -> Color.rgb(255, 140, 50, 0.07);
+            case WINTER -> Color.rgb(205, 235, 255, 0.16);
+        };
+
+        gc.setFill(overlay);
+        gc.fillRect(0, 0, width, height);
     }
 
     private void drawMiniGrid(GraphicsContext gc) {
