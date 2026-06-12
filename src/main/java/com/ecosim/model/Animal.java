@@ -67,6 +67,8 @@ public abstract class Animal extends Entity {
     private double accumulatedDamage;
     private double damageEventTimer;
     private Vector2D lastDamagePosition;
+    private double hungerDecayMultiplier;
+    private double thirstDecayMultiplier;
 
     protected final Random random = new Random();
 
@@ -91,6 +93,8 @@ public abstract class Animal extends Entity {
         this.accumulatedDamage = 0;
         this.damageEventTimer = 0;
         this.lastDamagePosition = position;
+        this.hungerDecayMultiplier = 1.0;
+        this.thirstDecayMultiplier = 1.0;
         this.naturalEnemies = List.of();
         this.preyTypes = List.of();
         //update 
@@ -182,11 +186,11 @@ public abstract class Animal extends Entity {
     /** Giảm hunger, thirst theo thời gian */
     protected void updateNeeds(double deltaTime) {
         // Đói dần
-        hunger -= Constants.HUNGER_DECAY_RATE * deltaTime;
+        hunger -= Constants.HUNGER_DECAY_RATE * hungerDecayMultiplier * deltaTime;
         if (hunger < 0) hunger = 0;
 
         // Khát dần
-        thirst -= Constants.THIRST_DECAY_RATE * deltaTime;
+        thirst -= Constants.THIRST_DECAY_RATE * thirstDecayMultiplier * deltaTime;
         if (thirst < 0) thirst = 0;
 
         // Đói/khát → mất máu
@@ -408,6 +412,10 @@ public abstract class Animal extends Entity {
 
     public void setHunger(double hunger) { this.hunger = Math.max(0, Math.min(Constants.MAX_HUNGER, hunger)); }
     public void setThirst(double thirst) { this.thirst = Math.max(0, Math.min(Constants.MAX_THIRST, thirst)); }
+    public void setNeedDecayMultipliers(double hungerMultiplier, double thirstMultiplier) {
+        this.hungerDecayMultiplier = Math.max(0, hungerMultiplier);
+        this.thirstDecayMultiplier = Math.max(0, thirstMultiplier);
+    }
     
     public double getAge() { return age; }
     public double getReproductionCooldown() { return reproductionCooldown; }

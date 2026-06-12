@@ -17,6 +17,7 @@ public class FruitTree extends Plant {
     /** Thời gian mọc mỗi quả (giây) */
     private double fruitGrowthTimer;
     private final double fruitGrowthInterval;
+    private double fruitGrowthMultiplier;
 
     public FruitTree(Vector2D position) {
 
@@ -46,6 +47,7 @@ public class FruitTree extends Plant {
 
         // quả mọc chậm hơn
         this.fruitGrowthInterval = 40.0;
+        this.fruitGrowthMultiplier = 1.0;
     }
 
     @Override
@@ -67,7 +69,11 @@ public class FruitTree extends Plant {
     // Fruit growth
     // =========================================
 
-    fruitGrowthTimer += deltaTime;
+    if (fruitGrowthMultiplier <= 0) {
+        return;
+    }
+
+    fruitGrowthTimer += deltaTime * fruitGrowthMultiplier;
 
     if (fruitGrowthTimer >= fruitGrowthInterval
         && fruitCount < maxFruits) {
@@ -113,4 +119,7 @@ public class FruitTree extends Plant {
 
     public int getFruitCount() { return fruitCount; }
     public int getMaxFruits() { return maxFruits; }
+    public void setFruitGrowthMultiplier(double fruitGrowthMultiplier) {
+        this.fruitGrowthMultiplier = Math.max(0, fruitGrowthMultiplier);
+    }
 }
