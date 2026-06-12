@@ -4,6 +4,7 @@ import com.ecosim.strategy.SurvivalStrategy;
 import com.ecosim.util.Constants;
 import com.ecosim.util.Vector2D;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -17,6 +18,7 @@ import java.util.Random;
  * - ViewLogic: hiển thị → delegate cho Renderer (bên ngoài)
  */
 public abstract class Animal extends Entity {
+    private static final double DAMAGE_EVENT_INTERVAL = 0.35;
 
     // ===== Nhu cầu sinh tồn =====
     /** 0 = chết đói, MAX = no bụng */
@@ -61,6 +63,10 @@ public abstract class Animal extends Entity {
     /** Cooldown di chuyển wandering direction */
     protected double wanderTimer;
     protected Vector2D wanderTarget;
+    private final List<DamageEvent> pendingDamageEvents;
+    private double accumulatedDamage;
+    private double damageEventTimer;
+    private Vector2D lastDamagePosition;
 
     protected final Random random = new Random();
 
@@ -81,6 +87,10 @@ public abstract class Animal extends Entity {
         this.stateTimer = 0;
         this.wanderTimer = 0;
         this.wanderTarget = null;
+        this.pendingDamageEvents = new ArrayList<>();
+        this.accumulatedDamage = 0;
+        this.damageEventTimer = 0;
+        this.lastDamagePosition = position;
         this.naturalEnemies = List.of();
         this.preyTypes = List.of();
         //update 
@@ -109,6 +119,7 @@ public abstract class Animal extends Entity {
 
         // 3. Cập nhật state timer
         stateTimer += deltaTime;
+        updateDamageEventTimer(deltaTime);
     }
 
     /**
@@ -180,10 +191,10 @@ public abstract class Animal extends Entity {
 
         // Đói/khát → mất máu
         if (hunger <= 0) {
-            health -= 10 * deltaTime;
+            takeDamage(10 * deltaTime);
         }
         if (thirst <= 0) {
-            health -= 15 * deltaTime;
+            takeDamage(15 * deltaTime);
         }
 
         // Khi đói, tốc độ giảm
@@ -293,9 +304,19 @@ public abstract class Animal extends Entity {
 
     /** Nhận sát thương */
     public void takeDamage(double damage) {
-        health -= damage;
+        if (damage <= 0 || !alive) return;
+
+        double oldHealth = health;
+        health = Math.max(0, health - damage);
+        double actualDamage = oldHealth - health;
+
+        if (actualDamage > 0) {
+            accumulatedDamage += actualDamage;
+            lastDamagePosition = position;
+        }
+
         if (health <= 0) {
-            health = 0;
+            flushDamageEvent();
             die();
         }
     }
@@ -359,6 +380,31 @@ public abstract class Animal extends Entity {
     public Vector2D getDirection() { return direction; }
     public List<Class<? extends Animal>> getNaturalEnemies() { return naturalEnemies; }
     public List<Class<? extends Entity>> getPreyTypes() { return preyTypes; }
+
+    public List<DamageEvent> consumeDamageEvents() {
+        List<DamageEvent> events = new ArrayList<>(pendingDamageEvents);
+        pendingDamageEvents.clear();
+        return events;
+    }
+
+    private void updateDamageEventTimer(double deltaTime) {
+        if (accumulatedDamage <= 0) return;
+
+        damageEventTimer += deltaTime;
+        if (damageEventTimer >= DAMAGE_EVENT_INTERVAL) {
+            flushDamageEvent();
+        }
+    }
+
+    private void flushDamageEvent() {
+        if (accumulatedDamage <= 0) return;
+
+        pendingDamageEvents.add(
+            new DamageEvent(lastDamagePosition, accumulatedDamage)
+        );
+        accumulatedDamage = 0;
+        damageEventTimer = 0;
+    }
 
     public void setHunger(double hunger) { this.hunger = Math.max(0, Math.min(Constants.MAX_HUNGER, hunger)); }
     public void setThirst(double thirst) { this.thirst = Math.max(0, Math.min(Constants.MAX_THIRST, thirst)); }

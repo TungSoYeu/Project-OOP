@@ -24,6 +24,7 @@ public class EntityManager {
     private static final int MAX_PLANTS = 180;
 
     private final List<Entity> entities;
+    private final List<DamageEvent> pendingDamageEvents;
     private final WorldMap worldMap;
     private final Random random;
 
@@ -31,6 +32,7 @@ public class EntityManager {
 
         this.worldMap = worldMap;
         this.entities = new CopyOnWriteArrayList<>();
+        this.pendingDamageEvents = new ArrayList<>();
         this.random = new Random();
     }
 
@@ -194,6 +196,8 @@ public class EntityManager {
     // =========================================================
 
     public void cleanup(Season currentSeason) {
+
+        collectDamageEvents();
 
         // Remove dead entities
         entities.removeIf(e -> !e.isAlive());
@@ -466,6 +470,12 @@ public class EntityManager {
         return result;
     }
 
+    public List<DamageEvent> consumeDamageEvents() {
+        List<DamageEvent> events = new ArrayList<>(pendingDamageEvents);
+        pendingDamageEvents.clear();
+        return events;
+    }
+
     public int countEntities(Class<?> clazz) {
 
         int count = 0;
@@ -501,6 +511,14 @@ public class EntityManager {
             );
 
         return currentCount < maxAllowed;
+    }
+
+    private void collectDamageEvents() {
+        for (Entity entity : entities) {
+            if (entity instanceof Animal animal) {
+                pendingDamageEvents.addAll(animal.consumeDamageEvents());
+            }
+        }
     }
 
     private int getMaxPopulationForSpecies(
