@@ -19,6 +19,20 @@ import java.util.Random;
  */
 public abstract class Animal extends Entity {
     private static final double DAMAGE_EVENT_INTERVAL = 0.35;
+    private static final double MIN_INTERACTION_REACH = 1.5;
+    private static final double INTERACTION_MARGIN = 0.2;
+    private static final int WANDER_TARGET_ATTEMPTS = 12;
+    private static final double[] STEERING_ANGLES = {
+        0,
+        Math.PI / 6,
+        -Math.PI / 6,
+        Math.PI / 3,
+        -Math.PI / 3,
+        Math.PI / 2,
+        -Math.PI / 2,
+        2 * Math.PI / 3,
+        -2 * Math.PI / 3
+    };
 
     // ===== Nhu cầu sinh tồn =====
     /** 0 = chết đói, MAX = no bụng */
@@ -222,7 +236,7 @@ public abstract class Animal extends Entity {
         if (wanderTarget == null || wanderTimer <= 0 ||
             position.distanceTo(wanderTarget) < 1.0) {
             // Chọn hướng đi mới
-            wanderTarget = position.add(Vector2D.random(10));
+            wanderTarget = findWanderTarget(worldMap);
             wanderTimer = 3 + random.nextDouble() * 5; // 3-8 giây
         }
 
@@ -233,19 +247,27 @@ public abstract class Animal extends Entity {
         if (target == null) return;
 
         Vector2D dir = position.directionTo(target);
+        if (dir.magnitude() == 0) {
+            doIdle(deltaTime);
+            return;
+        }
         TerrainType terrain = worldMap.getTerrainAt(position.getX(), position.getY());
 
         // Kiểm tra có thể đi trên terrain này không
         double terrainMod = getTerrainSpeedModifier(terrain);
         double moveSpeed = (isRunning ? speed * 1.3 : speed) * terrainMod;
+        if (moveSpeed <= 0) {
+            moveSpeed = maxSpeed * 0.5;
+        }
 
-        Vector2D newPos = position.add(dir.multiply(moveSpeed * deltaTime));
+        Vector2D newPos =
+            findBestMovePosition(target, dir, moveSpeed * deltaTime, worldMap);
 
         // Kiểm tra vị trí mới có hợp lệ không
-        TerrainType newTerrain = worldMap.getTerrainAt(newPos.getX(), newPos.getY());
-        if (canTraverse(newTerrain) && worldMap.isInBounds(newPos.getX(), newPos.getY())) {
+        if (newPos != null) {
+            Vector2D moveDir = position.directionTo(newPos);
             position = newPos;
-            direction = dir;
+            direction = moveDir;
             setState(isRunning ? AnimalState.RUNNING : AnimalState.WALKING);
         } else {
             // Không đi được → đổi hướng
@@ -257,8 +279,7 @@ public abstract class Animal extends Entity {
     protected void doEat(Entity food, double deltaTime) {
         if (food == null || !food.isAlive()) return;
 
-        double dist = distanceTo(food);
-        if (dist < 1.5) {
+        if (canReach(food)) {
             setState(AnimalState.EATING);
             if (food instanceof Plant plant) {
                 double nutrition = plant.beEaten();
@@ -358,6 +379,95 @@ public abstract class Animal extends Entity {
     public boolean isPrey(Entity entity) {
         if (entity == null || !entity.isAlive()) return false;
         return preyTypes.stream().anyMatch(c -> c.isInstance(entity));
+    }
+
+    public boolean canReach(Entity entity) {
+        if (entity == null) return false;
+        double reach = Math.max(MIN_INTERACTION_REACH, getSize() + entity.getSize() + INTERACTION_MARGIN);
+        double dist = distanceTo(entity);
+        return dist <= reach;
+    }
+
+    // Local steering helpers for terrain borders and obstacles.
+    private Vector2D findWanderTarget(WorldMap worldMap) {
+        for (int attempt = 0; attempt < WANDER_TARGET_ATTEMPTS; attempt++) {
+            Vector2D candidate = position.add(Vector2D.random(10));
+            if (isTraversablePosition(candidate, worldMap)) {
+                return candidate;
+            }
+        }
+
+        return position;
+    }
+
+    private Vector2D findBestMovePosition(
+        Vector2D target,
+        Vector2D preferredDir,
+        double moveDistance,
+        WorldMap worldMap
+    ) {
+        if (moveDistance <= 0) {
+            return null;
+        }
+
+        double[] stepScales = {1.0, 0.5, 0.25};
+
+        for (double stepScale : stepScales) {
+            double step = moveDistance * stepScale;
+            Vector2D best = null;
+            double bestScore = Double.MAX_VALUE;
+
+            for (double angle : STEERING_ANGLES) {
+                Vector2D candidateDir = rotate(preferredDir, angle).normalize();
+                if (candidateDir.magnitude() == 0) {
+                    continue;
+                }
+
+                Vector2D candidate =
+                    position.add(candidateDir.multiply(step));
+
+                if (!isTraversablePosition(candidate, worldMap)) {
+                    continue;
+                }
+
+                double score =
+                    candidate.distanceTo(target)
+                        + Math.abs(angle) * 0.05
+                        + (1.0 - stepScale) * 0.2;
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = candidate;
+                }
+            }
+
+            if (best != null) {
+                return best;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isTraversablePosition(Vector2D candidate, WorldMap worldMap) {
+        if (!worldMap.isInBounds(candidate.getX(), candidate.getY())) {
+            return false;
+        }
+
+        TerrainType terrain =
+            worldMap.getTerrainAt(candidate.getX(), candidate.getY());
+
+        return canTraverse(terrain);
+    }
+
+    private Vector2D rotate(Vector2D vector, double angle) {
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+
+        return new Vector2D(
+            vector.getX() * cos - vector.getY() * sin,
+            vector.getX() * sin + vector.getY() * cos
+        );
     }
 
     /** Đổi chiến lược sinh tồn (runtime) */

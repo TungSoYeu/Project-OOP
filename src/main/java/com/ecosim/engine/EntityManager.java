@@ -405,7 +405,7 @@ public class EntityManager {
                 double minDist =
                     a.getSize() + b.getSize();
 
-                if (dist < minDist && dist > 0.01) {
+                if (dist < minDist) {
 
                     if (canOverlap(a, b)) {
                         continue;
@@ -435,18 +435,10 @@ public class EntityManager {
                             ? a
                             : b;
 
-                    Vector2D pushDir =
-                        higher.getPosition()
-                            .directionTo(lower.getPosition());
-
                     double pushDist =
-                        minDist - dist + 0.1;
+                        minDist - Math.max(dist, 0.01) + 0.1;
 
-                    lower.setPosition(
-                        lower.getPosition().add(
-                            pushDir.multiply(pushDist)
-                        )
-                    );
+                    pushEntityAway(lower, higher, pushDist);
                 }
             }
         }
@@ -631,13 +623,35 @@ public class EntityManager {
             pushDir = Vector2D.randomDirection();
         }
 
-        Vector2D newPos =
-            entity.getPosition()
-                .add(pushDir.multiply(pushDist));
+        Vector2D perpendicular =
+            new Vector2D(-pushDir.getY(), pushDir.getX());
 
-        if (worldMap.isInBounds(newPos.getX(), newPos.getY())) {
-            entity.setPosition(newPos);
+        Vector2D[] directions = new Vector2D[] {
+            pushDir,
+            pushDir.add(perpendicular.multiply(0.75)).normalize(),
+            pushDir.add(perpendicular.multiply(-0.75)).normalize(),
+            perpendicular,
+            perpendicular.multiply(-1)
+        };
+
+        for (Vector2D direction : directions) {
+            Vector2D newPos =
+                entity.getPosition()
+                    .add(direction.multiply(pushDist));
+
+            if (canMoveEntityTo(entity, newPos)) {
+                entity.setPosition(newPos);
+                return;
+            }
         }
+    }
+
+    private boolean canMoveEntityTo(Entity entity, Vector2D position) {
+        if (worldMap.isInBounds(position.getX(), position.getY())) {
+         TerrainType terrain = worldMap.getTerrainAt(position.getX(), position.getY());
+        return entity.canTraverse(terrain);
+        }
+        return false;
     }
 
     private Vector2D findPlantSpawnPosition(

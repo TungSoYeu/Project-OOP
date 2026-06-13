@@ -41,8 +41,7 @@ public class AggressiveStrategy implements SurvivalStrategy {
         // 1. Tìm thức ăn bằng mọi giá - BẤT CHẤP kẻ thù
         Entity food = findBestFood(self, nearby);
         if (food != null) {
-            double dist = self.distanceTo(food);
-            if (dist < 1.5) {
+            if (self.canReach(food)) {
                 return Action.eat(food);
             }
             return Action.moveTo(food.getPosition());

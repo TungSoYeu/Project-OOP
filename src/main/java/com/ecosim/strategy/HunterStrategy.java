@@ -57,8 +57,7 @@ public class HunterStrategy implements SurvivalStrategy {
         if (self.getHunger() < 30) {
             Entity plant = findNearestPlant(self, nearby);
             if (plant != null) {
-                double dist = self.distanceTo(plant);
-                if (dist < 1.5) {
+                if (self.canReach(plant)) {
                     return Action.eat(plant);
                 }
                 return Action.moveTo(plant.getPosition());

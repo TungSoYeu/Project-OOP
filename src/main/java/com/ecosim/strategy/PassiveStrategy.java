@@ -1,6 +1,7 @@
 package com.ecosim.strategy;
 
 import com.ecosim.model.*;
+import com.ecosim.util.Constants;
 import com.ecosim.util.Vector2D;
 
 import java.util.List;
@@ -16,7 +17,7 @@ import java.util.List;
  * 4. Nếu không có nhu cầu → lang thang
  */
 public class PassiveStrategy implements SurvivalStrategy {
-
+    private static final double FOOD_SEARCH = Constants.MAX_HUNGER * 0.9;
     @Override
     public Action decide(Animal self, List<Entity> nearby, WorldMap worldMap) {
         // 1. Khát → tìm nước
@@ -35,11 +36,10 @@ public class PassiveStrategy implements SurvivalStrategy {
         }
 
         // 2. Đói → tìm thức ăn
-        if (self.getHunger() < 60) {
+        if (self.getHunger() < FOOD_SEARCH) {
             Entity food = findNearestFood(self, nearby);
             if (food != null) {
-                double dist = self.distanceTo(food);
-                if (dist < 1.5) {
+                if (self.canReach(food)) {
                     return Action.eat(food);
                 }
                 return Action.moveTo(food.getPosition());
@@ -47,7 +47,7 @@ public class PassiveStrategy implements SurvivalStrategy {
         }
 
         // 3. Mệt → ngủ
-        if (self.getHealth() < self.getMaxHealth() * 0.3) {
+        if (self.getHealth() < self.getMaxHealth() * 0.35) {
             return Action.sleep();
         }
 
@@ -60,15 +60,15 @@ public class PassiveStrategy implements SurvivalStrategy {
         Entity nearest = null;
         double minDist = Double.MAX_VALUE;
 
-        for (Entity entity : nearby) {
-            if (!entity.isAlive()) continue;
-            if (self.isPrey(entity)) {
-                double dist = self.distanceTo(entity);
+        for (Entity e : nearby) {
+            if (!e.isAlive()) continue;
+            if (self.isPrey(e)) {
+                double dist = self.distanceTo(e);
                 if (dist < minDist) {
                     // Kiểm tra thêm nếu là Plant → phải edible
-                    if (entity instanceof Plant plant && !plant.isEdible()) continue;
+                    if (e instanceof Plant plant && !plant.isEdible()) continue;
                     minDist = dist;
-                    nearest = entity;
+                    nearest = e;
                 }
             }
         }
