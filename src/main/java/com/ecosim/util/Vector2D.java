@@ -59,6 +59,14 @@ public class Vector2D {
         return target.subtract(this).normalize();
     }
 
+    /** Nội suy tuyến tính (Linear Interpolation) giữa vector này và vector khác */
+    public Vector2D lerp(Vector2D target, double alpha) {
+        alpha = Math.max(0.0, Math.min(1.0, alpha));
+        double newX = this.x + (target.x - this.x) * alpha;
+        double newY = this.y + (target.y - this.y) * alpha;
+        return new Vector2D(newX, newY);
+    }
+
     /** Giới hạn magnitude trong phạm vi max */
     public Vector2D clampMagnitude(double maxMagnitude) {
         double mag = magnitude();

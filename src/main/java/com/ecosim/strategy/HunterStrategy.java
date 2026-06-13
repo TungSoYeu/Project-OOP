@@ -1,6 +1,7 @@
 package com.ecosim.strategy;
 
 import com.ecosim.model.*;
+import com.ecosim.util.Constants;
 import com.ecosim.util.Vector2D;
 
 import java.util.Comparator;
@@ -33,11 +34,15 @@ public class HunterStrategy implements SurvivalStrategy {
             }
         }
 
-        // 2. Quét tìm con mồi
-        Optional<Entity> prey = findBestPrey(self, nearby);
-        if (prey.isPresent()) {
-            Entity target = prey.get();
-            double dist = self.distanceTo(target);
+        // 2. Quét tìm con mồi (chỉ săn khi đói hoặc là Thợ săn)
+        boolean isHungry = self.getHunger() < Constants.MAX_HUNGER * 0.8;
+        boolean isHunter = self instanceof Hunter;
+        
+        if (isHungry || isHunter) {
+            Optional<Entity> prey = findBestPrey(self, nearby, worldMap);
+            if (prey.isPresent()) {
+                Entity target = prey.get();
+                double dist = self.distanceTo(target);
 
             // Hổ gầm khi phát hiện con mồi
             if (self instanceof Tiger tiger) {
@@ -51,6 +56,7 @@ public class HunterStrategy implements SurvivalStrategy {
 
             // Đuổi theo; giữ targetEntity để Animal biết đây là chase/run.
             return new Action(Action.Type.MOVE_TO, target.getPosition(), target);
+            }
         }
 
         // 3. Đói → tìm thức ăn thực vật (backup cho khi không có mồi)
@@ -76,18 +82,25 @@ public class HunterStrategy implements SurvivalStrategy {
 
     /**
      * Tìm con mồi tốt nhất:
+     * - Bỏ qua con mồi đang trốn trong bụi cỏ (gần Grass entity)
      * - Ưu tiên con yếu nhất (health thấp)
      * - Ưu tiên con gần nhất
      */
-    private Optional<Entity> findBestPrey(Animal self, List<Entity> nearby) {
+    private Optional<Entity> findBestPrey(Animal self, List<Entity> nearby, WorldMap worldMap) {
         return nearby.stream()
             .filter(e -> e.isAlive() && self.isPrey(e))
             .filter(e -> e instanceof Animal) // Chỉ săn động vật
+            .filter(e -> !isHidingInGrass(e, nearby)) // Bỏ qua mồi trong bụi cỏ
             .min(Comparator.comparingDouble(e -> {
                 double dist = self.distanceTo(e);
                 double healthFactor = (e instanceof Animal a) ? a.getHealth() / a.getMaxHealth() : 1.0;
                 return dist * healthFactor; // Ưu tiên gần + yếu
             }));
+    }
+
+    private boolean isHidingInGrass(Entity prey, List<Entity> nearby) {
+        return nearby.stream()
+            .anyMatch(e -> e instanceof Grass && e.distanceTo(prey) < 1.0);
     }
 
     /** Tìm thực vật gần nhất */

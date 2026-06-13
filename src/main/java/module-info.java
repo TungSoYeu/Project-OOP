@@ -5,7 +5,7 @@ module com.ecosim {
     requires transitive javafx.graphics;
 
     opens com.ecosim to javafx.fxml, javafx.graphics;
-    opens com.ecosim.view to javafx.fxml;
+    opens com.ecosim.view to javafx.fxml, javafx.graphics;
 
     exports com.ecosim;
     exports com.ecosim.model;

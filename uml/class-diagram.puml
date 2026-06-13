@@ -1,0 +1,180 @@
+@startuml
+title Main Class Diagram - Wild-Life Eco Simulation
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam monochrome true
+skinparam linetype ortho
+
+abstract class Entity {
+  - String id
+  - String name
+  # Vector2D position
+  # boolean alive
+  # int priority
+  # double size
+  + update(deltaTime, worldMap)
+  + getTerrainSpeedModifier(terrain)
+  + canTraverse(terrain)
+  + getTypeName()
+}
+
+abstract class Animal {
+  # double hunger
+  # double thirst
+  # double health
+  # double speed
+  # SurvivalStrategy strategy
+  # AnimalState state
+  + executeAction(action, deltaTime, worldMap)
+  + canReproduce()
+  + createOffspring()
+  + setStrategy(strategy)
+  + resetStrategy()
+}
+
+abstract class Plant {
+  # double nutrition
+  # double growth
+  + beEaten(deltaTime)
+  + canSpread()
+  + createOffspring(position)
+}
+
+class Rabbit
+class Deer
+class Wolf
+class Tiger
+class Elephant
+class Hunter
+class Fish
+class Duck
+class Grass
+class FruitTree
+
+class Action {
+  + Type type
+  + Vector2D targetPosition
+  + Entity targetEntity
+}
+
+enum AnimalState
+enum Season
+enum TerrainType
+
+class WorldMap {
+  - TerrainTile[][] tiles
+  + getTerrainAt(x, y)
+  + setTerrainAt(x, y, type)
+  + getRandomPosition(type)
+}
+
+class TerrainTile {
+  - TerrainType type
+}
+
+class SimulationEngine {
+  - WorldMap worldMap
+  - EntityManager entityManager
+  - SeasonManager seasonManager
+  + tick(deltaTime)
+  + spawnEntity(type, x, y)
+  + plantGrass(x, y)
+}
+
+class EntityManager {
+  - List<Entity> entities
+  + spawnInitialEntities()
+  + getNearby(center, radius)
+  + processSpringReproduction()
+  + resolveMovementPriority()
+  + getEntityCountByType()
+}
+
+class SeasonManager {
+  - Season currentSeason
+  + update(deltaTime)
+  + getSeasonProgress()
+}
+
+interface SurvivalStrategy {
+  + decide(self, nearby, worldMap)
+  + getName()
+}
+
+class PassiveStrategy
+class ScaredStrategy
+class HunterStrategy
+class AggressiveStrategy
+
+interface Renderer {
+  + renderTerrain(gc, worldMap, camera)
+  + renderEntity(gc, entity, camera)
+  + renderEntityInfo(gc, entity, camera)
+  + getModeName()
+}
+
+class BasicRenderer
+class SpriteRenderer
+class GameView
+class Camera
+class SoundManager
+class ParticleSystem
+class AssetManager
+class Vector2D
+class Constants
+class AnimalReproductionFactory
+
+Entity <|-- Animal
+Entity <|-- Plant
+
+Animal <|-- Rabbit
+Animal <|-- Deer
+Animal <|-- Wolf
+Animal <|-- Tiger
+Animal <|-- Elephant
+Animal <|-- Hunter
+Animal <|-- Fish
+Animal <|-- Duck
+
+Plant <|-- Grass
+Plant <|-- FruitTree
+
+Animal --> SurvivalStrategy : delegates behavior
+Animal --> AnimalState : current state
+Animal --> Action : executes
+Animal --> WorldMap : checks terrain
+Animal --> Vector2D : position/direction
+AnimalReproductionFactory ..> Animal : creates offspring
+
+SurvivalStrategy <|.. PassiveStrategy
+SurvivalStrategy <|.. ScaredStrategy
+SurvivalStrategy <|.. HunterStrategy
+SurvivalStrategy <|.. AggressiveStrategy
+
+SimulationEngine *-- WorldMap
+SimulationEngine *-- EntityManager
+SimulationEngine *-- SeasonManager
+SimulationEngine ..> Entity
+SimulationEngine ..> Animal
+SimulationEngine ..> Plant
+
+EntityManager o-- Entity
+EntityManager ..> AnimalReproductionFactory
+EntityManager ..> Constants
+
+WorldMap *-- TerrainTile
+TerrainTile --> TerrainType
+SeasonManager --> Season
+
+Renderer <|.. BasicRenderer
+Renderer <|.. SpriteRenderer
+GameView *-- Renderer
+GameView *-- Camera
+GameView *-- SoundManager
+GameView *-- ParticleSystem
+GameView --> SimulationEngine
+SpriteRenderer --> AssetManager
+AssetManager --> Entity
+
+@enduml

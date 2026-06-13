@@ -95,17 +95,22 @@ public abstract class Plant extends Entity {
     }
 
     /**
-     * Bị ăn - giảm kích thước hoặc chết.
+     * Bị ăn - giảm kích thước hoặc chết từ từ theo thời gian.
      * @return lượng dinh dưỡng cung cấp
      */
-    public double beEaten() {
+    public double beEaten(double deltaTime) {
         if (!isEdible()) return 0;
-        double nutrition = nutritionValue * (size / maxSize);
-        size -= maxSize * 0.5; // Bị ăn mất 50%
+        
+        // Mất 3 giây để ăn hết 1 cây (kích thước tối đa)
+        double sizeLoss = (maxSize / 3.0) * deltaTime;
+        if (sizeLoss > size) sizeLoss = size;
+
+        double nutrition = (sizeLoss / maxSize) * nutritionValue;
+        size -= sizeLoss;
         if (size <= 0) {
             alive = false;
             size = 0;
-        } else {
+        } else if (size < maxSize * 0.5) {
             mature = false; // Cần mọc lại
         }
         return nutrition;

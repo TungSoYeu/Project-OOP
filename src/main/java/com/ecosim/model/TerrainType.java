@@ -1,6 +1,5 @@
 package com.ecosim.model;
 
-import javafx.scene.paint.Color;
 import com.ecosim.util.Constants;
 
 /**
@@ -28,13 +27,13 @@ public enum TerrainType {
 
     private final double speedModifier;
     private final boolean defaultTraversable;
-    private final Color color;
+    private final String hexColor;
     private final String displayName;
 
-    TerrainType(double speedModifier, boolean defaultTraversable, Color color, String displayName) {
+    TerrainType(double speedModifier, boolean defaultTraversable, String hexColor, String displayName) {
         this.speedModifier = speedModifier;
         this.defaultTraversable = defaultTraversable;
-        this.color = color;
+        this.hexColor = hexColor;
         this.displayName = displayName;
     }
 
@@ -44,8 +43,8 @@ public enum TerrainType {
     /** Mặc định có thể đi qua hay không (loài cụ thể override) */
     public boolean isDefaultTraversable() { return defaultTraversable; }
 
-    /** Màu hiển thị trên bản đồ */
-    public Color getColor() { return color; }
+    /** Màu hiển thị trên bản đồ (Hex string) */
+    public String getHexColor() { return hexColor; }
 
     /** Tên hiển thị tiếng Việt */
     public String getDisplayName() { return displayName; }

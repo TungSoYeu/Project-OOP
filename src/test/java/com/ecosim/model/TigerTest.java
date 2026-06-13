@@ -11,6 +11,7 @@ class TigerTest {
     @Test
     void tigerDealsAmbushDamageWhenAttackingFromForest() {
         WorldMap worldMap = new WorldMap();
+        worldMap.setTerrainAt(60, 10, TerrainType.FOREST); // Đảm bảo hổ đứng trên rừng
         Tiger tiger = new Tiger(new Vector2D(60.5, 10.5));
         Rabbit rabbit = new Rabbit(new Vector2D(61.0, 10.5));
 

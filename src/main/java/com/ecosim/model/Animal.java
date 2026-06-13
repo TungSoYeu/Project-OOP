@@ -61,6 +61,7 @@ public abstract class Animal extends Entity {
     /** Cooldown di chuyển wandering direction */
     protected double wanderTimer;
     protected Vector2D wanderTarget;
+    protected Vector2D currentTarget; // Dùng cho debug vẽ đường đi
 
     protected final Random random = new Random();
 
@@ -81,6 +82,7 @@ public abstract class Animal extends Entity {
         this.stateTimer = 0;
         this.wanderTimer = 0;
         this.wanderTarget = null;
+        this.currentTarget = null;
         this.naturalEnemies = List.of();
         this.preyTypes = List.of();
         //update 
@@ -118,6 +120,15 @@ public abstract class Animal extends Entity {
 
     public void executeAction(Action action, double deltaTime, WorldMap worldMap) {
         if (!alive) return;
+
+        // Lưu mục tiêu cho debug hiển thị
+        if (action.getTargetPosition() != null) {
+            this.currentTarget = action.getTargetPosition();
+        } else if (action.getTargetEntity() != null) {
+            this.currentTarget = action.getTargetEntity().getPosition();
+        } else {
+            this.currentTarget = null;
+        }
 
         switch (action.getType()) {
             case IDLE -> doIdle(deltaTime);
@@ -191,12 +202,8 @@ public abstract class Animal extends Entity {
             health -= 15 * deltaTime;
         }
 
-        // Khi đói, tốc độ giảm
-        if (hunger < Constants.CRITICAL_HUNGER) {
-            speed = maxSpeed * 0.6;
-        } else {
-            speed = maxSpeed*0.85;
-        }
+        // Lưu ý: Tốc độ (speed) được quản lý bởi doMoveTo() với hệ thống gia tốc.
+        // doMoveTo() đã tự tính toán giảm tốc khi đói (hunger < CRITICAL_HUNGER).
     }
 
     // ===== Các hành động cơ bản =====
@@ -222,28 +229,62 @@ public abstract class Animal extends Entity {
     protected void doMoveTo(Vector2D target, double deltaTime, WorldMap worldMap, boolean isRunning) {
         if (target == null) return;
 
-        Vector2D dir = position.directionTo(target);
+        Vector2D targetDir = position.directionTo(target);
         TerrainType terrain = worldMap.getTerrainAt(position.getX(), position.getY());
 
         // Kiểm tra có thể đi trên terrain này không
         double terrainMod = getTerrainSpeedModifier(terrain);
-        double moveSpeed = (isRunning ? speed * getRunSpeedMultiplier() : speed) * terrainMod;
+        double maxAllowedSpeed = (isRunning ? maxSpeed * getRunSpeedMultiplier() : maxSpeed * 0.8) * terrainMod;
+        
+        // Suy giảm tốc độ khi đói
+        if (hunger < Constants.CRITICAL_HUNGER) {
+            maxAllowedSpeed *= 0.6;
+        }
 
-        double stepDistance =
-            Math.min(moveSpeed * deltaTime, position.distanceTo(target));
-        Vector2D newPos = position.add(dir.multiply(stepDistance));
+        // Tăng tốc hoặc giảm tốc dần (Acceleration/Deceleration)
+        if (speed < maxAllowedSpeed) {
+            speed = Math.min(maxAllowedSpeed, speed + maxAllowedSpeed * 1.5 * deltaTime);
+        } else if (speed > maxAllowedSpeed) {
+            speed = Math.max(maxAllowedSpeed, speed - maxAllowedSpeed * 2.5 * deltaTime);
+        }
+
+        // Lấy khoảng cách tới mục tiêu
+        double distToTarget = position.distanceTo(target);
+        
+        // Chậm lại khi tới rất gần mục tiêu (Braking)
+        if (distToTarget < 1.0) {
+            speed *= distToTarget; 
+        }
+
+        double stepDistance = Math.min(speed * deltaTime, distToTarget);
+        
+        // Steering: Xoay mượt mà (Lerp)
+        if (direction == null) direction = targetDir;
+        direction = direction.lerp(targetDir, 6.0 * deltaTime).normalize();
+        if (direction.magnitude() == 0) direction = targetDir;
+
+        Vector2D newPos = position.add(direction.multiply(stepDistance));
 
         // Kiểm tra vị trí mới có hợp lệ không
         TerrainType newTerrain = worldMap.getTerrainAt(newPos.getX(), newPos.getY());
         if (canTraverse(newTerrain) && worldMap.isInBounds(newPos.getX(), newPos.getY())) {
             position = newPos;
-            direction = dir;
             setState(isRunning ? AnimalState.RUNNING : AnimalState.WALKING);
         } else {
-            // Không đi được -> dừng và đổi mục tiêu lang thang.
-            wanderTarget = null;
-            wanderTimer = 0;
-            setState(AnimalState.IDLE);
+            // Tránh tường: Cố gắng trượt dọc theo tường
+            Vector2D slidePos = position.add(new Vector2D(direction.getX(), 0).multiply(stepDistance));
+            if (canTraverse(worldMap.getTerrainAt(slidePos.getX(), slidePos.getY())) && worldMap.isInBounds(slidePos.getX(), slidePos.getY())) {
+                position = slidePos;
+            } else {
+                slidePos = position.add(new Vector2D(0, direction.getY()).multiply(stepDistance));
+                if (canTraverse(worldMap.getTerrainAt(slidePos.getX(), slidePos.getY())) && worldMap.isInBounds(slidePos.getX(), slidePos.getY())) {
+                    position = slidePos;
+                } else {
+                    wanderTarget = null;
+                    wanderTimer = 0;
+                    setState(AnimalState.IDLE);
+                }
+            }
         }
     }
 
@@ -261,14 +302,22 @@ public abstract class Animal extends Entity {
         double dist = distanceTo(food);
         if (dist < 1.5) {
             setState(AnimalState.EATING);
+            
+            // Tốc độ lấp đầy thanh đói: 3 giây để đầy 100% (MAX_HUNGER / 3.0)
+            double fillRate = Constants.MAX_HUNGER / 3.0;
+
             if (food instanceof Plant plant) {
-                double nutrition = plant.beEaten();
-                hunger = Math.min(Constants.MAX_HUNGER, hunger + nutrition);
-                health = Math.min(maxHealth, health + 5);
+                double nutrition = plant.beEaten(deltaTime); // Thực vật mất dần size
+                if (this instanceof Rabbit) {
+                    hunger = Math.min(Constants.MAX_HUNGER, hunger + fillRate * deltaTime);
+                } else {
+                    hunger = Math.min(Constants.MAX_HUNGER, hunger + nutrition);
+                }
+                health = Math.min(maxHealth, health + 5 * deltaTime);
             } else if (food instanceof Animal prey) {
                 // Ăn thịt con mồi đã chết
                 if (!prey.isAlive()) {
-                    hunger = Math.min(Constants.MAX_HUNGER, hunger + 40);
+                    hunger = Math.min(Constants.MAX_HUNGER, hunger + fillRate * deltaTime);
                 }
             }
         }
@@ -381,4 +430,5 @@ public abstract class Animal extends Entity {
     
     public double getAge() { return age; }
     public double getReproductionCooldown() { return reproductionCooldown; }
+    public Vector2D getTargetPosition() { return currentTarget; }
 }

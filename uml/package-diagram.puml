@@ -1,0 +1,77 @@
+@startuml
+title Package Dependency Diagram - Wild-Life Eco Simulation
+
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam monochrome true
+skinparam linetype ortho
+
+package "com.ecosim" as root {
+  class App
+  class TestEngine
+}
+
+package "com.ecosim.engine" as engine {
+  class SimulationEngine
+  class EntityManager
+  class SeasonManager
+}
+
+package "com.ecosim.model" as model {
+  abstract class Entity
+  abstract class Animal
+  abstract class Plant
+  class WorldMap
+  class TerrainTile
+  enum TerrainType
+  enum Season
+  class Action
+}
+
+package "com.ecosim.strategy" as strategy {
+  interface SurvivalStrategy
+  class PassiveStrategy
+  class ScaredStrategy
+  class HunterStrategy
+  class AggressiveStrategy
+}
+
+package "com.ecosim.view" as view {
+  class GameView
+  interface Renderer
+  class BasicRenderer
+  class SpriteRenderer
+  class Camera
+  class AssetManager
+  class ParticleSystem
+}
+
+package "com.ecosim.sound" as sound {
+  class SoundManager
+}
+
+package "com.ecosim.util" as util {
+  class Constants
+  class Vector2D
+}
+
+root --> engine : creates/uses
+root --> view : creates UI
+root --> util : constants
+
+engine --> model : updates entities/map
+engine --> strategy : calls decide()
+engine --> util : positions/constants
+
+strategy --> model : reads Animal/Entity/WorldMap
+strategy --> util : vectors
+
+view --> engine : controls simulation
+view --> model : renders entities/map
+view --> sound : plays effects
+view --> util : camera/constants
+
+model --> util : Vector2D/Constants
+sound --> root : JavaFX media resources
+
+@enduml

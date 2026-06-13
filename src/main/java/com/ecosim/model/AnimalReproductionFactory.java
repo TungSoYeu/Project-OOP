@@ -122,9 +122,10 @@ public final class AnimalReproductionFactory {
             }
         }
 
-        // Last resort: clamp position to map bounds
-        double x = Math.max(0, Math.min(worldMap.getWidth(), preferredPosition.getX()));
-        double y = Math.max(0, Math.min(worldMap.getHeight(), preferredPosition.getY()));
+        // Last resort: clamp position to map bounds (with margin 1.5)
+        double margin = 1.5;
+        double x = Math.max(margin, Math.min(worldMap.getWidth() - margin, preferredPosition.getX()));
+        double y = Math.max(margin, Math.min(worldMap.getHeight() - margin, preferredPosition.getY()));
         return new Vector2D(x, y);
     }
 }

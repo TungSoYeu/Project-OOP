@@ -2,6 +2,7 @@ package com.ecosim.engine;
 
 import com.ecosim.model.*;
 import com.ecosim.strategy.SurvivalStrategy;
+import com.ecosim.util.Constants;
 
 import java.util.List;
 
@@ -157,9 +158,17 @@ public class SimulationEngine {
         worldMap.setTerrainAt(tileX, tileY, TerrainType.ROCK);
     }
 
+    /** Đặt bụi rậm tại vị trí click */
+    public void placeBush(int tileX, int tileY) {
+        worldMap.setTerrainAt(tileX, tileY, TerrainType.BUSH);
+    }
+
     /** Spawn entity theo loại */
     public void spawnEntity(String type, double worldX, double worldY) {
-        com.ecosim.util.Vector2D pos = new com.ecosim.util.Vector2D(worldX, worldY);
+        double margin = 1.5;
+        double cx = Math.max(margin, Math.min(Constants.MAP_WIDTH - margin, worldX));
+        double cy = Math.max(margin, Math.min(Constants.MAP_HEIGHT - margin, worldY));
+        com.ecosim.util.Vector2D pos = new com.ecosim.util.Vector2D(cx, cy);
         switch (type) {
             case "Thỏ" -> entityManager.addEntity(new Rabbit(pos));
             case "Hươu" -> entityManager.addEntity(new Deer(pos));
@@ -167,6 +176,8 @@ public class SimulationEngine {
             case "Hổ" -> entityManager.addEntity(new Tiger(pos));
             case "Thợ săn" -> entityManager.addEntity(new Hunter(pos));
             case "Voi" -> entityManager.addEntity(new Elephant(pos));
+            case "Cá" -> entityManager.addEntity(new Fish(pos));
+            case "Vịt" -> entityManager.addEntity(new Duck(pos));
             case "Cỏ" -> entityManager.addEntity(new Grass(pos));
             case "Cây ăn quả" -> entityManager.addEntity(new FruitTree(pos));
         }

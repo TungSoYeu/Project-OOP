@@ -85,13 +85,20 @@ public class FruitTree extends Plant {
         return nutritionValue;
     }
 
+    private double currentFruitProgress = 0;
+
     @Override
-    public double beEaten() {
+    public double beEaten(double deltaTime) {
         // Ưu tiên ăn quả trước
         if (fruitCount > 0) {
-            return harvestFruit();
+            currentFruitProgress += deltaTime;
+            if (currentFruitProgress >= 1.0) { // 1 giây để ăn 1 quả
+                currentFruitProgress = 0;
+                fruitCount--;
+            }
+            return nutritionValue * deltaTime; // Trả về dần dần
         }
-        return super.beEaten();
+        return super.beEaten(deltaTime);
     }
 
     @Override

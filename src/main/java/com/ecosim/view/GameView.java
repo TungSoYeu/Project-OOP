@@ -34,6 +34,7 @@ public class GameView extends BorderPane {
     private final GraphicsContext gc;
     private AnimationTimer gameLoop;
     private final SoundManager soundManager;
+    private final ParticleSystem particleSystem;
 
     // UI Components
     private final VBox sidebar;
@@ -57,11 +58,16 @@ public class GameView extends BorderPane {
     // Context menu
     private ContextMenu contextMenu;
 
+    // Debug overlays
+    private boolean showVision = false;
+    private boolean showPath = false;
+
     public GameView(SimulationEngine engine) {
         this.engine = engine;
         this.camera = new Camera(900, 600);
         this.renderer = new BasicRenderer();
         this.soundManager = new SoundManager();
+        this.particleSystem = new ParticleSystem();
 
         // Canvas setup
         this.canvas = new Canvas(900, 600);
@@ -176,17 +182,25 @@ public class GameView extends BorderPane {
         selectTool.setToggleGroup(toolGroup);
         selectTool.setSelected(true);
         selectTool.setTextFill(Color.WHITE);
-        selectTool.setOnAction(e -> currentTool = "select");
 
         RadioButton grassTool = new RadioButton("🌱 Gieo cỏ");
         grassTool.setToggleGroup(toolGroup);
         grassTool.setTextFill(Color.WHITE);
-        grassTool.setOnAction(e -> currentTool = "grass");
 
         RadioButton rockTool = new RadioButton("🪨 Đặt đá");
         rockTool.setToggleGroup(toolGroup);
         rockTool.setTextFill(Color.WHITE);
-        rockTool.setOnAction(e -> currentTool = "rock");
+
+        RadioButton bushTool = new RadioButton("🌿 Đặt bụi rậm");
+        bushTool.setToggleGroup(toolGroup);
+        bushTool.setTextFill(Color.WHITE);
+
+        toolGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
+            if (newToggle == selectTool) currentTool = "select";
+            else if (newToggle == grassTool) currentTool = "grass";
+            else if (newToggle == rockTool) currentTool = "rock";
+            else if (newToggle == bushTool) currentTool = "bush";
+        });
 
         Separator sep1 = new Separator();
         sep1.setOrientation(javafx.geometry.Orientation.VERTICAL);
@@ -194,12 +208,23 @@ public class GameView extends BorderPane {
         sep2.setOrientation(javafx.geometry.Orientation.VERTICAL);
         Separator sep3 = new Separator();
         sep3.setOrientation(javafx.geometry.Orientation.VERTICAL);
+        Separator sep4 = new Separator();
+        sep4.setOrientation(javafx.geometry.Orientation.VERTICAL);
+
+        CheckBox visionToggle = new CheckBox("👁 Tầm nhìn");
+        visionToggle.setTextFill(Color.WHITE);
+        visionToggle.setOnAction(e -> showVision = visionToggle.isSelected());
+
+        CheckBox pathToggle = new CheckBox("🎯 Đường đi");
+        pathToggle.setTextFill(Color.WHITE);
+        pathToggle.setOnAction(e -> showPath = pathToggle.isSelected());
 
         bar.getChildren().addAll(
             playBtn, sep1,
             speedLabel, speedBox, modeBtn, sep2,
             viewLabel, viewBox, sep3,
-            toolLabel, selectTool, grassTool, rockTool
+            toolLabel, selectTool, grassTool, rockTool, bushTool, sep4,
+            visionToggle, pathToggle
         );
 
         return bar;
@@ -235,7 +260,7 @@ public class GameView extends BorderPane {
         var season = engine.getSeasonManager().getCurrentSeason();
         Label seasonInfo = new Label(season.getIcon() + " " + season.getDisplayName()
             + " (Năm " + engine.getSeasonManager().getYearCount() + ")");
-        seasonInfo.setTextFill(season.getThemeColor());
+        seasonInfo.setTextFill(Color.web(season.getThemeHexColor()));
         seasonInfo.setFont(Font.font("System", FontWeight.BOLD, 13));
 
         // Season progress bar
@@ -256,6 +281,20 @@ public class GameView extends BorderPane {
             String icon = getEntityIcon(entry.getKey());
             Label countLabel = new Label(icon + " " + entry.getKey() + ": " + entry.getValue());
             countLabel.setTextFill(Color.LIGHTGRAY);
+            
+            // Click to focus camera
+            countLabel.setCursor(javafx.scene.Cursor.HAND);
+            countLabel.setOnMouseClicked(e -> {
+                Entity target = engine.getEntityManager().getEntities().stream()
+                    .filter(ent -> ent.getTypeName().equals(entry.getKey()) && ent.isAlive())
+                    .findFirst().orElse(null);
+                if (target != null) {
+                    camera.setX(target.getPosition().getX() - camera.getVisibleWidth()/2);
+                    camera.setY(target.getPosition().getY() - camera.getVisibleHeight()/2);
+                    selectedEntity = target;
+                }
+            });
+            
             sidebar.getChildren().add(countLabel);
         }
 
@@ -281,6 +320,33 @@ public class GameView extends BorderPane {
                     Label stratLabel = new Label("Chiến lược: " + animal.getStrategy().getName());
                     stratLabel.setTextFill(Color.LIGHTCYAN);
                     sidebar.getChildren().add(stratLabel);
+                }
+
+                // Control panel (Không áp dụng cho Thợ săn)
+                if (!(animal instanceof Hunter)) {
+                    sidebar.getChildren().add(new Separator());
+                    Label ctrlLabel = new Label("Bảng điều khiển hành vi");
+                    ctrlLabel.setTextFill(Color.WHITE);
+                    ctrlLabel.setFont(Font.font("System", FontWeight.BOLD, 12));
+                    sidebar.getChildren().add(ctrlLabel);
+
+                    Button btnHungry = new Button("Làm cho Đói");
+                    btnHungry.setOnAction(e -> animal.setHunger(0));
+                    btnHungry.setMaxWidth(Double.MAX_VALUE);
+
+                    Button btnThirsty = new Button("Làm cho Khát");
+                    btnThirsty.setOnAction(e -> animal.setThirst(0));
+                    btnThirsty.setMaxWidth(Double.MAX_VALUE);
+
+                    Button btnFull = new Button("Ăn No");
+                    btnFull.setOnAction(e -> animal.setHunger(Constants.MAX_HUNGER));
+                    btnFull.setMaxWidth(Double.MAX_VALUE);
+
+                    Button btnQuenched = new Button("Uống Đủ");
+                    btnQuenched.setOnAction(e -> animal.setThirst(Constants.MAX_THIRST));
+                    btnQuenched.setMaxWidth(Double.MAX_VALUE);
+
+                    sidebar.getChildren().addAll(btnHungry, btnThirsty, btnFull, btnQuenched);
                 }
 
                 Label posLabel = new Label("Vị trí: " + animal.getPosition());
@@ -354,6 +420,12 @@ public class GameView extends BorderPane {
         MenuItem spawnHunter = new MenuItem("🏹 Thêm Thợ săn");
         spawnHunter.setOnAction(e -> spawnAtContextPos("Thợ săn"));
 
+        MenuItem spawnFish = new MenuItem("🐟 Thêm Cá");
+        spawnFish.setOnAction(e -> spawnAtContextPos("Cá"));
+
+        MenuItem spawnDuck = new MenuItem("🦆 Thêm Vịt");
+        spawnDuck.setOnAction(e -> spawnAtContextPos("Vịt"));
+
         SeparatorMenuItem sep = new SeparatorMenuItem();
 
         MenuItem plantGrass = new MenuItem("🌱 Gieo cỏ");
@@ -370,9 +442,16 @@ public class GameView extends BorderPane {
             engine.placeRock((int) wx, (int) wy);
         });
 
+        MenuItem placeBush = new MenuItem("🌿 Đặt bụi rậm");
+        placeBush.setOnAction(e -> {
+            double wx = camera.screenToWorldX(lastMouseX);
+            double wy = camera.screenToWorldY(lastMouseY);
+            engine.placeBush((int) wx, (int) wy);
+        });
+
         contextMenu.getItems().addAll(
-            spawnRabbit, spawnDeer, spawnWolf, spawnTiger, spawnElephant, spawnHunter,
-            sep, plantGrass, placeRock
+            spawnRabbit, spawnDeer, spawnWolf, spawnTiger, spawnElephant, spawnHunter, spawnFish, spawnDuck,
+            sep, plantGrass, placeRock, placeBush
         );
     }
 
@@ -393,51 +472,57 @@ public class GameView extends BorderPane {
         canvas.setOnScroll(this::handleScroll);
     }
 
+    private boolean isDragging = false;
+    private Entity potentialSelection = null;
+
     private void handleMousePressed(MouseEvent e) {
         lastMouseX = e.getX();
         lastMouseY = e.getY();
-
-        if (e.getButton() == MouseButton.SECONDARY) {
-            // Right click: context menu
-            contextWorldX = camera.screenToWorldX(e.getX());
-            contextWorldY = camera.screenToWorldY(e.getY());
-            contextMenu.show(canvas, e.getScreenX(), e.getScreenY());
-            return;
-        }
+        isDragging = false;
 
         contextMenu.hide();
 
-        if (e.getButton() == MouseButton.PRIMARY) {
+        if (e.getButton() == MouseButton.SECONDARY) {
+            contextWorldX = camera.screenToWorldX(e.getX());
+            contextWorldY = camera.screenToWorldY(e.getY());
+        } else if (e.getButton() == MouseButton.PRIMARY) {
             double wx = camera.screenToWorldX(e.getX());
             double wy = camera.screenToWorldY(e.getY());
 
             switch (currentTool) {
                 case "select" -> {
                     // Tìm entity gần nhất để chọn
-                    selectedEntity = findEntityAt(wx, wy);
+                    potentialSelection = findEntityAt(wx, wy);
+                    if (potentialSelection != null) {
+                        selectedEntity = potentialSelection;
+                    }
                 }
                 case "grass" -> engine.plantGrass(wx, wy);
                 case "rock" -> engine.placeRock((int) wx, (int) wy);
+                case "bush" -> engine.placeBush((int) wx, (int) wy);
             }
         }
     }
 
     private void handleMouseDragged(MouseEvent e) {
+        isDragging = true;
         double deltaX = e.getX() - lastMouseX;
         double deltaY = e.getY() - lastMouseY;
         boolean primaryDown = e.isPrimaryButtonDown();
+        boolean secondaryDown = e.isSecondaryButtonDown();
         boolean middleDown = e.isMiddleButtonDown();
 
-        if (middleDown || (primaryDown && currentTool.equals("select"))) {
+        if (middleDown || secondaryDown || (primaryDown && currentTool.equals("select"))) {
             camera.pan(deltaX, deltaY);
         }
 
-        // Vẽ liên tục khi kéo với tool cỏ/đá
+        // Vẽ liên tục khi kéo với tool cỏ/đá/bụi rậm
         if (primaryDown) {
             double wx = camera.screenToWorldX(e.getX());
             double wy = camera.screenToWorldY(e.getY());
             if (currentTool.equals("grass")) engine.plantGrass(wx, wy);
             if (currentTool.equals("rock")) engine.placeRock((int) wx, (int) wy);
+            if (currentTool.equals("bush")) engine.placeBush((int) wx, (int) wy);
         }
 
         lastMouseX = e.getX();
@@ -445,6 +530,15 @@ public class GameView extends BorderPane {
     }
 
     private void handleMouseReleased(MouseEvent e) {
+        if (!isDragging) {
+            if (e.getButton() == MouseButton.PRIMARY && currentTool.equals("select")) {
+                if (potentialSelection == null) {
+                    selectedEntity = null;
+                }
+            } else if (e.getButton() == MouseButton.SECONDARY) {
+                contextMenu.show(canvas, e.getScreenX(), e.getScreenY());
+            }
+        }
     }
 
     private void handleScroll(ScrollEvent e) {
@@ -487,6 +581,10 @@ public class GameView extends BorderPane {
                 // Render
                 render();
 
+                // Effects & Particles
+                particleSystem.update(deltaTime);
+                processParticles();
+
                 // Sound integration
                 processSounds();
 
@@ -519,9 +617,23 @@ public class GameView extends BorderPane {
         // Vẽ terrain
         renderer.renderTerrain(gc, engine.getWorldMap(), camera);
 
+        // Hiệu ứng màu theo mùa (Season Tint) - Phủ lên địa hình
+        Season currentSeason = engine.getSeasonManager().getCurrentSeason();
+        Color tint = switch (currentSeason) {
+            case SPRING -> Color.rgb(255, 182, 193, 0.1); // Hồng phấn nhẹ
+            case SUMMER -> Color.rgb(255, 255, 200, 0.1); // Vàng nắng
+            case AUTUMN -> Color.rgb(210, 105, 30, 0.15); // Cam thu
+            case WINTER -> Color.rgb(200, 220, 255, 0.25); // Xanh tuyết lạnh
+        };
+        gc.setFill(tint);
+        gc.fillRect(0, 0, w, h);
+
         // Vẽ entities
         List<Entity> entities = engine.getEntityManager().getEntities();
         renderer.renderEntities(gc, entities, camera);
+
+        // Vẽ hiệu ứng hạt (Particles)
+        particleSystem.render(gc, camera);
 
         // Vẽ info cho entity đã chọn
         if (selectedEntity != null && selectedEntity.isAlive()) {
@@ -536,6 +648,33 @@ public class GameView extends BorderPane {
             gc.setLineDashes(4);
             gc.strokeOval(sx - size / 2, sy - size / 2, size, size);
             gc.setLineDashes(null);
+
+            if (selectedEntity instanceof Animal animal) {
+                // Vẽ tầm nhìn (Vision Range)
+                if (showVision) {
+                    double vRadius = camera.entityScreenSize(animal.getSightRange());
+                    gc.setStroke(Color.rgb(255, 255, 255, 0.3));
+                    gc.setLineWidth(1);
+                    gc.strokeOval(sx - vRadius, sy - vRadius, vRadius * 2, vRadius * 2);
+                    gc.setFill(Color.rgb(255, 255, 255, 0.05));
+                    gc.fillOval(sx - vRadius, sy - vRadius, vRadius * 2, vRadius * 2);
+                }
+
+                // Vẽ đường đi (Path)
+                if (showPath && animal.getTargetPosition() != null) {
+                    double targetX = camera.worldToScreenX(animal.getTargetPosition().getX());
+                    double targetY = camera.worldToScreenY(animal.getTargetPosition().getY());
+                    gc.setStroke(Color.rgb(0, 255, 255, 0.6));
+                    gc.setLineWidth(1.5);
+                    gc.setLineDashes(5);
+                    gc.strokeLine(sx, sy, targetX, targetY);
+                    gc.setLineDashes(null);
+                    
+                    // Vẽ đích đến
+                    gc.setFill(Color.rgb(0, 255, 255, 0.6));
+                    gc.fillOval(targetX - 3, targetY - 3, 6, 6);
+                }
+            }
         }
 
         // Vẽ mini grid khi zoom thấp
@@ -582,6 +721,7 @@ public class GameView extends BorderPane {
         String toolText = switch (currentTool) {
             case "grass" -> "🌱 Gieo cỏ (Click/Kéo)";
             case "rock" -> "🪨 Đặt vách đá (Click/Kéo)";
+            case "bush" -> "🌿 Đặt bụi rậm (Click/Kéo)";
             default -> "";
         };
         if (!toolText.isEmpty()) {
@@ -611,6 +751,8 @@ public class GameView extends BorderPane {
             case "Hổ" -> "🐅";
             case "Thợ săn" -> "🏹";
             case "Voi" -> "🐘";
+            case "Cá" -> "🐟";
+            case "Vịt" -> "🦆";
             default -> "•";
         };
     }
@@ -618,6 +760,47 @@ public class GameView extends BorderPane {
     public void stopGameLoop() {
         if (gameLoop != null) {
             gameLoop.stop();
+        }
+    }
+
+    private void processParticles() {
+        if (engine.getSpeedMultiplier() > 4.0) return; // Giảm tải khi tua nhanh
+        for (Entity e : engine.getEntityManager().getEntities()) {
+            if (!e.isAlive()) continue;
+
+            if (e instanceof Animal animal) {
+                double wx = e.getPosition().getX();
+                double wy = e.getPosition().getY();
+
+                // Chạy nhanh tạo bụi
+                if ((animal.getState() == AnimalState.RUNNING || animal.getState() == AnimalState.FLEEING) 
+                    && Math.random() < 0.1) {
+                    particleSystem.emitDust(wx, wy);
+                }
+                
+                // Đang ngủ tạo Zzz
+                if (animal.getState() == AnimalState.SLEEPING && Math.random() < 0.02) {
+                    particleSystem.emitZzz(wx, wy);
+                }
+
+                // Tấn công tạo tia máu (hoặc khi bị thương)
+                if (animal.getState() == AnimalState.ATTACKING && Math.random() < 0.1) {
+                    // Ước tính vị trí mục tiêu phía trước mặt
+                    double tx = wx;
+                    double ty = wy;
+                    if (animal.getDirection() != null) {
+                        tx += animal.getDirection().getX() * 0.5;
+                        ty += animal.getDirection().getY() * 0.5;
+                    }
+                    particleSystem.emitBlood(tx, ty);
+                }
+                
+                // Mùa xuân và thỏ -> Thi thoảng thả tim (Gợi ý sinh sản)
+                if (engine.getSeasonManager().getCurrentSeason() == Season.SPRING 
+                    && animal.canReproduce() && Math.random() < 0.005) {
+                    particleSystem.emitHeart(wx, wy);
+                }
+            }
         }
     }
 

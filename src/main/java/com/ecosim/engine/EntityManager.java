@@ -71,6 +71,17 @@ public class EntityManager {
 
         addEntity(new Elephant(randomGrasslandPos()));
         addEntity(new Elephant(randomGrasslandPos()));
+
+        // ===== Aquatic =====
+        for (int i = 0; i < 15; i++) {
+            Vector2D pos = randomWaterPos();
+            if (pos != null) addEntity(new Fish(pos));
+        }
+
+        for (int i = 0; i < 8; i++) {
+            Vector2D pos = randomWaterPos();
+            if (pos != null) addEntity(new Duck(pos));
+        }
     }
 
     // =========================================================
@@ -248,7 +259,7 @@ public class EntityManager {
 
             entities.stream()
                 .filter(e -> e instanceof Grass)
-                .skip(Constants.MAX_GRASS)
+                .limit(grassCount - Constants.MAX_GRASS)
                 .forEach(e -> e.setAlive(false));
 
             entities.removeIf(e -> !e.isAlive());
@@ -315,9 +326,15 @@ public class EntityManager {
                 if (rabbit.getHunger()
                     < Constants.CRITICAL_HUNGER) {
 
-                    rabbit.setStrategy(
-                        new com.ecosim.strategy.AggressiveStrategy()
-                    );
+                    if (!(rabbit.getStrategy() instanceof com.ecosim.strategy.AggressiveStrategy)) {
+                        rabbit.setStrategy(
+                            new com.ecosim.strategy.AggressiveStrategy()
+                        );
+                    }
+                } else {
+                    if (!(rabbit.getStrategy() instanceof com.ecosim.strategy.ScaredStrategy)) {
+                        rabbit.setStrategy(new com.ecosim.strategy.ScaredStrategy());
+                    }
                 }
 
             } else if (entity instanceof Deer deer) {
@@ -325,24 +342,27 @@ public class EntityManager {
                 if (deer.getHunger()
                     < Constants.CRITICAL_HUNGER) {
 
-                    deer.setStrategy(
-                        new com.ecosim.strategy.AggressiveStrategy()
-                    );
+                    if (!(deer.getStrategy() instanceof com.ecosim.strategy.AggressiveStrategy)) {
+                        deer.setStrategy(
+                            new com.ecosim.strategy.AggressiveStrategy()
+                        );
+                    }
+                } else {
+                    if (!(deer.getStrategy() instanceof com.ecosim.strategy.ScaredStrategy)) {
+                        deer.setStrategy(new com.ecosim.strategy.ScaredStrategy());
+                    }
                 }
             }
         }
     }
 
     // =========================================================
-    // MOVEMENT PRIORITY
+    // MOVEMENT PRIORITY & FLOCKING (Separation)
     // =========================================================
 
     public void resolveMovementPriority() {
-
         for (int i = 0; i < entities.size(); i++) {
-
             for (int j = i + 1; j < entities.size(); j++) {
-
                 Entity a = entities.get(i);
                 Entity b = entities.get(j);
 
@@ -351,21 +371,12 @@ public class EntityManager {
                 }
 
                 double dist = a.distanceTo(b);
+                double minDist = a.getSize() + b.getSize();
 
-                double minDist =
-                    a.getSize() + b.getSize();
-
-                if (dist < minDist) {
-
-                    Entity higher =
-                        a.getPriority() >= b.getPriority()
-                            ? a
-                            : b;
-
-                    Entity lower =
-                        a.getPriority() < b.getPriority()
-                            ? a
-                            : b;
+                // Lực đẩy mềm (Soft Separation) khi tới quá gần
+                if (dist < minDist * 1.5) {
+                    Entity higher = a.getPriority() >= b.getPriority() ? a : b;
+                    Entity lower = a.getPriority() < b.getPriority() ? a : b;
 
                     if (!(lower instanceof Animal lowerAnimal)) {
                         continue;
@@ -373,36 +384,25 @@ public class EntityManager {
 
                     Vector2D pushDir = dist <= 0.01
                         ? Vector2D.randomDirection()
-                        : higher.getPosition()
-                            .directionTo(lower.getPosition());
+                        : higher.getPosition().directionTo(lower.getPosition());
 
-                    double pushDist =
-                        minDist - dist + 0.1;
+                    // Áp dụng lực đẩy (Steering Force) từ từ thay vì dịch chuyển tức thời
+                    double force = (minDist * 1.5 - dist) * 0.05; // 0.05 là hệ số mượt (lerp factor)
+                    
+                    Vector2D newPos = lowerAnimal.getPosition().add(pushDir.multiply(force));
+                    TerrainType terrain = worldMap.getTerrainAt(newPos.getX(), newPos.getY());
 
-                    moveAside(lowerAnimal, pushDir, pushDist);
+                    if (worldMap.isInBounds(newPos.getX(), newPos.getY()) && lowerAnimal.canTraverse(terrain)) {
+                        lowerAnimal.setPosition(newPos);
+                        // Cập nhật hướng xoay nhẹ theo hướng đẩy để trông tự nhiên
+                        if (lowerAnimal.getDirection() != null) {
+                            Vector2D newDir = lowerAnimal.getDirection().lerp(pushDir, 0.1).normalize();
+                            if (newDir.magnitude() > 0) {
+                                // lowerAnimal.setDirection(newDir); // Nếu có hàm setDirection
+                            }
+                        }
+                    }
                 }
-            }
-        }
-    }
-
-    private void moveAside(Animal animal, Vector2D pushDir, double pushDist) {
-
-        Vector2D[] candidates = {
-            animal.getPosition().add(pushDir.multiply(pushDist)),
-            animal.getPosition().add(new Vector2D(-pushDir.getY(), pushDir.getX()).multiply(pushDist)),
-            animal.getPosition().add(new Vector2D(pushDir.getY(), -pushDir.getX()).multiply(pushDist))
-        };
-
-        for (Vector2D candidate : candidates) {
-
-            TerrainType terrain =
-                worldMap.getTerrainAt(candidate.getX(), candidate.getY());
-
-            if (worldMap.isInBounds(candidate.getX(), candidate.getY()) &&
-                animal.canTraverse(terrain)) {
-
-                animal.setPosition(candidate);
-                return;
             }
         }
     }
@@ -523,6 +523,16 @@ public class EntityManager {
         );
     }
 
+    private Vector2D randomWaterPos() {
+        for (int i = 0; i < 100; i++) {
+            int rx = random.nextInt(Constants.MAP_WIDTH);
+            int ry = random.nextInt(Constants.MAP_HEIGHT);
+            if (worldMap.getTerrainAt(rx, ry) == TerrainType.WATER || worldMap.getTerrainAt(rx, ry) == TerrainType.MUD) {
+                return new Vector2D(rx + 0.5, ry + 0.5);
+            }
+        }
+        return null;
+    }
     // =========================================================
     // GETTERS
     // =========================================================
@@ -565,5 +575,9 @@ public class EntityManager {
             );
 
         return counts;
+    }
+
+    public void clearAll() {
+        entities.clear();
     }
 }

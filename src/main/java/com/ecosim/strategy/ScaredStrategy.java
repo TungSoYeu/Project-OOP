@@ -1,7 +1,6 @@
 package com.ecosim.strategy;
 
 import com.ecosim.model.*;
-import com.ecosim.util.Vector2D;
 
 import java.util.Comparator;
 import java.util.List;
@@ -31,17 +30,24 @@ public class ScaredStrategy implements SurvivalStrategy {
             Entity enemy = nearestEnemy.get();
             double distToEnemy = self.distanceTo(enemy);
 
-            // Nếu kẻ thù trong tầm nguy hiểm (< sightRange * 0.8)
-            if (distToEnemy < self.getSightRange() * 0.8) {
+            // Thỏ khi đói liều lĩnh phớt lờ nguy hiểm để đi ăn
+            boolean recklessRabbit = (self instanceof Rabbit) && (self.getHunger() < 60);
 
-                // Thử tìm nơi trốn (bụi rậm / rừng) trước
-                if (self instanceof Rabbit rabbit && rabbit.canHideInBush()) {
-                    Vector2D hideSpot = worldMap.findNearestHidingSpot(self.getPosition());
-                    if (hideSpot != null) {
-                        double distToHide = self.getPosition().distanceTo(hideSpot);
-                        // Nếu chỗ trốn gần hơn kẻ thù → chạy vào trốn
-                        if (distToHide < distToEnemy) {
-                            return Action.hide(hideSpot);
+            // Nếu kẻ thù trong tầm nhìn (toàn bộ sightRange) và không liều lĩnh
+            if (!recklessRabbit && distToEnemy <= self.getSightRange()) {
+
+                // Tìm "Bụi cỏ" (Grass entity) gần nhất để trốn
+                if (self instanceof Rabbit) {
+                    Optional<Entity> nearestGrass = nearby.stream()
+                        .filter(e -> e.isAlive() && e instanceof Grass)
+                        .min(Comparator.comparingDouble(self::distanceTo));
+
+                    if (nearestGrass.isPresent()) {
+                        Entity grass = nearestGrass.get();
+                        double distToHide = self.distanceTo(grass);
+                        // Luôn cố gắng chạy về bụi cỏ gần nhất nếu nó ở không quá xa (< 20 tiles)
+                        if (distToHide < 20.0) {
+                            return Action.hide(grass.getPosition());
                         }
                     }
                 }

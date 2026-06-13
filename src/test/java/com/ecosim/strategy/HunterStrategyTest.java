@@ -38,6 +38,7 @@ class HunterStrategyTest {
     void predatorChaseActionKeepsTargetEntityForRunMovement() {
         WorldMap worldMap = new WorldMap();
         Wolf wolf = new Wolf(new Vector2D(10.5, 10.5));
+        wolf.setHunger(100); // Đói để bắt đầu đi săn
         Rabbit rabbit = new Rabbit(new Vector2D(14.5, 10.5));
 
         Action action = new HunterStrategy().decide(wolf, List.of(rabbit), worldMap);

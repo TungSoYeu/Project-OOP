@@ -171,6 +171,8 @@ public class Camera {
     // ===== Getters =====
     public double getX() { return x; }
     public double getY() { return y; }
+    public void setX(double x) { this.x = x; clampPosition(); }
+    public void setY(double y) { this.y = y; clampPosition(); }
     public double getZoom() { return zoom; }
     public double getViewportWidth() { return viewportWidth; }
     public double getViewportHeight() { return viewportHeight; }
