@@ -4,6 +4,7 @@ E:\Project OOP\src\main\java\com\ecosim\engine\SeasonManager.java
 E:\Project OOP\src\main\java\com\ecosim\engine\SimulationEngine.java
 E:\Project OOP\src\main\java\com\ecosim\model\Action.java
 E:\Project OOP\src\main\java\com\ecosim\model\Animal.java
+E:\Project OOP\src\main\java\com\ecosim\model\AnimalReproductionFactory.java
 E:\Project OOP\src\main\java\com\ecosim\model\AnimalState.java
 E:\Project OOP\src\main\java\com\ecosim\model\Deer.java
 E:\Project OOP\src\main\java\com\ecosim\model\Elephant.java
@@ -25,10 +26,12 @@ E:\Project OOP\src\main\java\com\ecosim\strategy\HunterStrategy.java
 E:\Project OOP\src\main\java\com\ecosim\strategy\PassiveStrategy.java
 E:\Project OOP\src\main\java\com\ecosim\strategy\ScaredStrategy.java
 E:\Project OOP\src\main\java\com\ecosim\strategy\SurvivalStrategy.java
+E:\Project OOP\src\main\java\com\ecosim\TestEngine.java
 E:\Project OOP\src\main\java\com\ecosim\util\Constants.java
 E:\Project OOP\src\main\java\com\ecosim\util\Vector2D.java
 E:\Project OOP\src\main\java\com\ecosim\view\BasicRenderer.java
 E:\Project OOP\src\main\java\com\ecosim\view\Camera.java
 E:\Project OOP\src\main\java\com\ecosim\view\GameView.java
 E:\Project OOP\src\main\java\com\ecosim\view\Renderer.java
+E:\Project OOP\src\main\java\com\ecosim\view\SpriteRenderer.java
 E:\Project OOP\src\main\java\module-info.java

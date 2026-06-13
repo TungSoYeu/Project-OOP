@@ -77,6 +77,11 @@ public class Wolf extends Animal {
     }   
 
     @Override
+    protected double getRunSpeedMultiplier() {
+        return chaseSpeedMultiplier;
+    }
+
+    @Override
     public double getTerrainSpeedModifier(TerrainType terrain) {
         return switch (terrain) {
             case GRASSLAND -> 1.0;

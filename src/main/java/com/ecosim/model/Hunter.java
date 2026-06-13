@@ -109,8 +109,8 @@ public class Hunter extends Animal {
     }
 
     /**
-     * Hunters are humans and do not reproduce in this simulation.
-     * The population is fixed at 1.
+     * Thợ săn không sinh sản trong mô phỏng này.
+     * Số lượng thợ săn được cố định bằng 1.
      */
     @Override
     public Animal createOffspring() {

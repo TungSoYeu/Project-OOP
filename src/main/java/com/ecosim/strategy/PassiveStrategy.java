@@ -21,9 +21,6 @@ public class PassiveStrategy implements SurvivalStrategy {
     public Action decide(Animal self, List<Entity> nearby, WorldMap worldMap) {
         // 1. Khát → tìm nước
         if (self.getThirst() < 40) {
-            // Kiểm tra có đang gần nước không
-            TerrainType currentTerrain = worldMap.getTerrainAt(
-                self.getPosition().getX(), self.getPosition().getY());
             if (isNearWater(self.getPosition(), worldMap)) {
                 self.drinkWater();
                 return Action.idle();

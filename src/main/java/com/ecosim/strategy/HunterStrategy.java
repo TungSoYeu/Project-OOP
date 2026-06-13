@@ -49,8 +49,8 @@ public class HunterStrategy implements SurvivalStrategy {
                 return Action.attack(target);
             }
 
-            // Đuổi theo
-            return Action.moveTo(target.getPosition());
+            // Đuổi theo; giữ targetEntity để Animal biết đây là chase/run.
+            return new Action(Action.Type.MOVE_TO, target.getPosition(), target);
         }
 
         // 3. Đói → tìm thức ăn thực vật (backup cho khi không có mồi)

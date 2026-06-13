@@ -64,7 +64,7 @@ public class Tiger extends Animal {
 
         TerrainType currentTerrain = worldMap.getTerrainAt(position.getX(), position.getY());
         double damage = attackPower;
-        if (currentTerrain == TerrainType.FOREST) {
+        if (currentTerrain == TerrainType.FOREST || currentTerrain == TerrainType.BUSH) {
             damage *= ambushMultiplier;
         }
 
@@ -73,6 +73,10 @@ public class Tiger extends Animal {
             setState(AnimalState.ATTACKING);
             if (target instanceof Animal prey) {
                 prey.takeDamage(damage * deltaTime);
+                if (!prey.isAlive()) {
+                    hunger = Math.min(Constants.MAX_HUNGER, hunger + 50);
+                    health = Math.min(maxHealth, health + 15);
+                }
             }
         } else {
             setState(AnimalState.RUNNING);

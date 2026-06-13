@@ -29,7 +29,6 @@ public class SeasonManager {
         seasonTimer += deltaTime;
         if (seasonTimer >= seasonDuration) {
             seasonTimer = 0;
-            Season oldSeason = currentSeason;
             currentSeason = currentSeason.next();
 
             // Đếm năm khi quay lại xuân

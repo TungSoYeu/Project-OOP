@@ -3,6 +3,8 @@ package com.ecosim.strategy;
 import com.ecosim.model.Action;
 import com.ecosim.model.Grass;
 import com.ecosim.model.Hunter;
+import com.ecosim.model.Rabbit;
+import com.ecosim.model.Wolf;
 import com.ecosim.model.WorldMap;
 import com.ecosim.util.Vector2D;
 import org.junit.jupiter.api.Test;
@@ -10,6 +12,8 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class HunterStrategyTest {
 
@@ -28,5 +32,23 @@ class HunterStrategyTest {
 
         assertEquals(Action.Type.MOVE_TO, action.getType());
         assertEquals(nearPlant.getPosition(), action.getTargetPosition());
+    }
+
+    @Test
+    void predatorChaseActionKeepsTargetEntityForRunMovement() {
+        WorldMap worldMap = new WorldMap();
+        Wolf wolf = new Wolf(new Vector2D(10.5, 10.5));
+        Rabbit rabbit = new Rabbit(new Vector2D(14.5, 10.5));
+
+        Action action = new HunterStrategy().decide(wolf, List.of(rabbit), worldMap);
+
+        assertEquals(Action.Type.MOVE_TO, action.getType());
+        assertSame(rabbit, action.getTargetEntity());
+
+        double before = wolf.distanceTo(rabbit);
+        wolf.executeAction(action, 0.5, worldMap);
+
+        assertEquals(com.ecosim.model.AnimalState.RUNNING, wolf.getState());
+        assertTrue(wolf.distanceTo(rabbit) < before);
     }
 }

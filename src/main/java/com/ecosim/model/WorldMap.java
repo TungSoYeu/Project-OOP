@@ -15,11 +15,16 @@ public class WorldMap {
     private final int width;
     private final int height;
     private final TerrainTile[][] tiles;
-    private final Random random = new Random();
+    private final Random random;
 
     public WorldMap(int width, int height) {
+        this(width, height, Constants.WORLD_SEED);
+    }
+
+    public WorldMap(int width, int height, long seed) {
         this.width = width;
         this.height = height;
+        this.random = new Random(seed);
         this.tiles = new TerrainTile[height][width];
         generateDefaultMap();
     }
@@ -191,8 +196,10 @@ public class WorldMap {
 
     /** Tìm vị trí bụi rậm/rừng gần nhất (để trốn) */
     public Vector2D findNearestHidingSpot(Vector2D from) {
-        double minDist = Double.MAX_VALUE;
-        Vector2D nearest = null;
+        double minBushDist = Double.MAX_VALUE;
+        double minForestDist = Double.MAX_VALUE;
+        Vector2D nearestForest = null;
+        Vector2D nearestBush = null;
 
         int cx = from.getTileX();
         int cy = from.getTileY();
@@ -205,20 +212,27 @@ public class WorldMap {
                     int tx = cx + dx, ty = cy + dy;
                     if (isInBounds(tx, ty)) {
                         TerrainType t = tiles[ty][tx].getType();
-                        if (t == TerrainType.BUSH || t == TerrainType.FOREST) {
+                        if (t == TerrainType.BUSH) {
                             Vector2D hidePos = new Vector2D(tx + 0.5, ty + 0.5);
                             double dist = from.distanceTo(hidePos);
-                            if (dist < minDist) {
-                                minDist = dist;
-                                nearest = hidePos;
+                            if (dist < minBushDist) {
+                                minBushDist = dist;
+                                nearestBush = hidePos;
+                            }
+                        } else if (t == TerrainType.FOREST && nearestBush == null) {
+                            Vector2D hidePos = new Vector2D(tx + 0.5, ty + 0.5);
+                            double dist = from.distanceTo(hidePos);
+                            if (dist < minForestDist) {
+                                minForestDist = dist;
+                                nearestForest = hidePos;
                             }
                         }
                     }
                 }
             }
-            if (nearest != null) break;
+            if (nearestBush != null) return nearestBush;
         }
-        return nearest;
+        return nearestForest;
     }
 
     /** Tìm vị trí ngẫu nhiên trên loại terrain chỉ định */

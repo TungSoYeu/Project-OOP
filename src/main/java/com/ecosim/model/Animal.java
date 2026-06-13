@@ -122,7 +122,12 @@ public abstract class Animal extends Entity {
         switch (action.getType()) {
             case IDLE -> doIdle(deltaTime);
             case WANDER -> doWander(deltaTime, worldMap);
-            case MOVE_TO -> doMoveTo(action.getTargetPosition(), deltaTime, worldMap, false);
+            case MOVE_TO -> doMoveTo(
+                action.getTargetPosition(),
+                deltaTime,
+                worldMap,
+                shouldRunToward(action.getTargetEntity())
+            );
             case EAT -> doEat(action.getTargetEntity(), deltaTime);
             case DRINK -> {
 
@@ -222,9 +227,11 @@ public abstract class Animal extends Entity {
 
         // Kiểm tra có thể đi trên terrain này không
         double terrainMod = getTerrainSpeedModifier(terrain);
-        double moveSpeed = (isRunning ? speed * 1.3 : speed) * terrainMod;
+        double moveSpeed = (isRunning ? speed * getRunSpeedMultiplier() : speed) * terrainMod;
 
-        Vector2D newPos = position.add(dir.multiply(moveSpeed * deltaTime));
+        double stepDistance =
+            Math.min(moveSpeed * deltaTime, position.distanceTo(target));
+        Vector2D newPos = position.add(dir.multiply(stepDistance));
 
         // Kiểm tra vị trí mới có hợp lệ không
         TerrainType newTerrain = worldMap.getTerrainAt(newPos.getX(), newPos.getY());
@@ -233,10 +240,19 @@ public abstract class Animal extends Entity {
             direction = dir;
             setState(isRunning ? AnimalState.RUNNING : AnimalState.WALKING);
         } else {
-            // Không đi được → đổi hướng
+            // Không đi được -> dừng và đổi mục tiêu lang thang.
             wanderTarget = null;
             wanderTimer = 0;
+            setState(AnimalState.IDLE);
         }
+    }
+
+    protected double getRunSpeedMultiplier() {
+        return 1.3;
+    }
+
+    private boolean shouldRunToward(Entity target) {
+        return target != null && isPrey(target);
     }
 
     protected void doEat(Entity food, double deltaTime) {

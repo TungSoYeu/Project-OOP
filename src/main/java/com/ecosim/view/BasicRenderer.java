@@ -16,7 +16,6 @@ import javafx.scene.text.TextAlignment;
 public class BasicRenderer implements Renderer {
 
     private static final Font LABEL_FONT = Font.font("Arial", 9);
-    private static final Font INFO_FONT = Font.font("Arial", 10);
 
     @Override
     public void renderTerrain(GraphicsContext gc, WorldMap worldMap, Camera camera) {

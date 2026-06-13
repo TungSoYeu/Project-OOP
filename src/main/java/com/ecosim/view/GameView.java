@@ -3,6 +3,7 @@ package com.ecosim.view;
 import com.ecosim.engine.SimulationEngine;
 import com.ecosim.model.*;
 import com.ecosim.util.Constants;
+import com.ecosim.sound.SoundManager;
 import javafx.animation.AnimationTimer;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -32,6 +33,7 @@ public class GameView extends BorderPane {
     private final Canvas canvas;
     private final GraphicsContext gc;
     private AnimationTimer gameLoop;
+    private final SoundManager soundManager;
 
     // UI Components
     private final VBox sidebar;
@@ -40,14 +42,11 @@ public class GameView extends BorderPane {
     private final Label seasonLabel;
     private final Label entityCountLabel;
     private final Label fpsLabel;
-    private final VBox entityInfoBox;
 
     // Interaction state
     private Entity selectedEntity;
     private double lastMouseX, lastMouseY;
-    private boolean isDragging;
     private String currentTool = "select"; // "select", "grass", "rock", "spawn"
-    private String spawnType = "";
 
     // FPS tracking
     private long lastFrameTime;
@@ -62,6 +61,7 @@ public class GameView extends BorderPane {
         this.engine = engine;
         this.camera = new Camera(900, 600);
         this.renderer = new BasicRenderer();
+        this.soundManager = new SoundManager();
 
         // Canvas setup
         this.canvas = new Canvas(900, 600);
@@ -74,7 +74,6 @@ public class GameView extends BorderPane {
         this.seasonLabel = new Label();
         this.entityCountLabel = new Label();
         this.fpsLabel = new Label("FPS: 0");
-        this.entityInfoBox = new VBox(5);
 
         // Build UI
         buildUI();
@@ -146,7 +145,11 @@ public class GameView extends BorderPane {
         // Render mode toggle
         Button modeBtn = new Button("🎨 " + renderer.getModeName());
         modeBtn.setOnAction(e -> {
-            // Toggle renderer (chỉ có Basic cho giờ)
+            if (renderer instanceof BasicRenderer) {
+                renderer = new SpriteRenderer();
+            } else {
+                renderer = new BasicRenderer();
+            }
             modeBtn.setText("🎨 " + renderer.getModeName());
         });
 
@@ -194,7 +197,7 @@ public class GameView extends BorderPane {
 
         bar.getChildren().addAll(
             playBtn, sep1,
-            speedLabel, speedBox, sep2,
+            speedLabel, speedBox, modeBtn, sep2,
             viewLabel, viewBox, sep3,
             toolLabel, selectTool, grassTool, rockTool
         );
@@ -412,15 +415,10 @@ public class GameView extends BorderPane {
                 case "select" -> {
                     // Tìm entity gần nhất để chọn
                     selectedEntity = findEntityAt(wx, wy);
-                    isDragging = false;
                 }
                 case "grass" -> engine.plantGrass(wx, wy);
                 case "rock" -> engine.placeRock((int) wx, (int) wy);
             }
-        }
-
-        if (e.getButton() == MouseButton.MIDDLE) {
-            isDragging = true;
         }
     }
 
@@ -432,7 +430,6 @@ public class GameView extends BorderPane {
 
         if (middleDown || (primaryDown && currentTool.equals("select"))) {
             camera.pan(deltaX, deltaY);
-            isDragging = true;
         }
 
         // Vẽ liên tục khi kéo với tool cỏ/đá
@@ -448,7 +445,6 @@ public class GameView extends BorderPane {
     }
 
     private void handleMouseReleased(MouseEvent e) {
-        isDragging = false;
     }
 
     private void handleScroll(ScrollEvent e) {
@@ -490,6 +486,9 @@ public class GameView extends BorderPane {
 
                 // Render
                 render();
+
+                // Sound integration
+                processSounds();
 
                 // FPS counter
                 frameCount++;
@@ -551,7 +550,6 @@ public class GameView extends BorderPane {
     private void drawMiniGrid(GraphicsContext gc) {
         gc.setStroke(Color.rgb(255, 255, 255, 0.1));
         gc.setLineWidth(0.5);
-        double tileSize = camera.getTileScreenSize();
 
         // Vẽ đường viền vùng
         drawRegionBorder(gc, Constants.GRASSLAND_X1, Constants.GRASSLAND_Y1,
@@ -620,6 +618,36 @@ public class GameView extends BorderPane {
     public void stopGameLoop() {
         if (gameLoop != null) {
             gameLoop.stop();
+        }
+    }
+
+    private void processSounds() {
+        if (engine.getSpeedMultiplier() > 2.0) return; // Không phát sound khi tua nhanh
+        for (Entity e : engine.getEntityManager().getEntities()) {
+            if (!e.isAlive()) continue;
+
+            if (e instanceof Tiger tiger && tiger.isRoaring()) {
+                soundManager.play(SoundManager.TIGER_ROAR);
+            }
+            if (e instanceof Wolf && Math.random() < 0.001) { // Thi thoảng sói hú
+                soundManager.play(SoundManager.WOLF_HOWL, 0.3);
+            }
+            if (e instanceof Animal animal) {
+                if (animal.getState() == AnimalState.EATING && Math.random() < 0.005) {
+                    soundManager.play(SoundManager.EAT_SOUND, 0.4);
+                }
+                if (animal.getState() == AnimalState.DRINKING && Math.random() < 0.005) {
+                    soundManager.play(SoundManager.WATER_SPLASH, 0.4);
+                }
+                if (animal.getState() == AnimalState.RUNNING && Math.random() < 0.002) {
+                    soundManager.play(SoundManager.FOOTSTEP_LEAVES, 0.2);
+                }
+            }
+        }
+        
+        // Thi thoảng chim hót
+        if (Math.random() < 0.002) {
+            soundManager.play(SoundManager.BIRD_CHIRP, 0.3);
         }
     }
 }

@@ -81,8 +81,11 @@ public class SimulationEngine {
 
             if (!entity.isAlive()) continue;
 
-            // Biological update
-            entity.update(adjustedDelta, worldMap);
+            // Biological update. Plant growth follows season; animal needs stay real-time.
+            double entityDelta = entity instanceof Plant
+                ? adjustedDelta * currentSeason.getPlantGrowthMultiplier()
+                : adjustedDelta;
+            entity.update(entityDelta, worldMap);
 
             // AI update
             if (entity instanceof Animal animal &&

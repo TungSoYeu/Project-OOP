@@ -1,6 +1,5 @@
 package com.ecosim.model;
 
-import com.ecosim.util.Constants;
 import com.ecosim.util.Vector2D;
 
 import java.util.Random;

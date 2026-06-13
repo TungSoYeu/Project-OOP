@@ -3,9 +3,9 @@ package com.ecosim;
 import com.ecosim.engine.SimulationEngine;
 import com.ecosim.util.Constants;
 import com.ecosim.view.GameView;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 /**

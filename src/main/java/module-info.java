@@ -2,7 +2,7 @@ module com.ecosim {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.media;
-    requires java.sql;
+    requires transitive javafx.graphics;
 
     opens com.ecosim to javafx.fxml, javafx.graphics;
     opens com.ecosim.view to javafx.fxml;

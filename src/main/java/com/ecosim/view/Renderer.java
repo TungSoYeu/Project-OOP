@@ -1,7 +1,6 @@
 package com.ecosim.view;
 
 import com.ecosim.model.*;
-import com.ecosim.util.Vector2D;
 import javafx.scene.canvas.GraphicsContext;
 
 import java.util.List;

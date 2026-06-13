@@ -20,6 +20,7 @@ public class SoundManager {
     private final Map<String, AudioClip> clips;
     private boolean enabled;
     private double volume;
+    private final Map<String, Long> lastPlayed;
 
     /** Danh sách sound event IDs */
     public static final String BIRD_CHIRP = "bird_chirp";
@@ -31,6 +32,7 @@ public class SoundManager {
 
     public SoundManager() {
         this.clips = new HashMap<>();
+        this.lastPlayed = new HashMap<>();
         this.enabled = true;
         this.volume = 0.5;
         loadSounds();
@@ -62,19 +64,27 @@ public class SoundManager {
 
     /** Phát âm thanh */
     public void play(String soundId) {
-        if (!enabled) return;
-        AudioClip clip = clips.get(soundId);
-        if (clip != null) {
-            clip.play(volume);
-        }
+        play(soundId, volume);
     }
 
     /** Phát âm thanh với volume tùy chỉnh */
     public void play(String soundId, double customVolume) {
         if (!enabled) return;
+        
+        long now = System.currentTimeMillis();
+        // Cooldown 300ms per sound to prevent lag and terminal spam
+        if (now - lastPlayed.getOrDefault(soundId, 0L) < 300) {
+            return;
+        }
+
         AudioClip clip = clips.get(soundId);
         if (clip != null) {
-            clip.play(customVolume);
+            try {
+                clip.play(customVolume);
+                lastPlayed.put(soundId, now);
+            } catch (Exception e) {
+                // Ignore internal JavaFX media exceptions
+            }
         }
     }
 

@@ -184,57 +184,56 @@ public class EntityManager {
 
         // Plant spreading
         List<Entity> newPlants = new ArrayList<>();
+        long plantCount =
+            entities.stream()
+                .filter(e -> e instanceof Plant)
+                .count();
 
         for (Entity entity : entities) {
-            if (currentSeason == Season.WINTER
-            && entity instanceof FruitTree) {
-
-            // 1% cây chết vào mùa đông
-            if (random.nextDouble() < 0.03) {
+            if (currentSeason == Season.WINTER &&
+                entity instanceof FruitTree &&
+                random.nextDouble() < 0.03) {
 
                 entity.setAlive(false);
                 continue;
-        }
-        }
-            if (entity instanceof Plant plant) {
+            }
 
-                Vector2D spawnPos =
-                    plant.getSpreadPosition();
+            if (!(entity instanceof Plant plant) || !plant.canSpread()) {
+                continue;
+            }
 
-                TerrainType terrain =
-                    worldMap.getTerrainAt(
-                        spawnPos.getX(),
-                        spawnPos.getY()
+            if (plantCount + newPlants.size() >= Constants.MAX_PLANTS) {
+                break;
+            }
+
+            Vector2D spawnPos =
+                plant.getSpreadPosition();
+
+            TerrainType terrain =
+                worldMap.getTerrainAt(
+                    spawnPos.getX(),
+                    spawnPos.getY()
+                );
+
+            if (terrain == TerrainType.GRASSLAND ||
+                terrain == TerrainType.FOREST) {
+
+                double chance = switch (currentSeason) {
+                    case SPRING -> 0.65;
+                    case SUMMER -> 0.35;
+                    case AUTUMN -> 0.15;
+                    case WINTER -> 0.0;
+                };
+
+                if (random.nextDouble() < chance) {
+
+                    newPlants.add(
+                        plant.createOffspring(spawnPos)
                     );
-                    long plantCount =
-                        entities.stream()
-                            .filter(e -> e instanceof Plant)
-                            .count();
-
-                    if (plantCount > 180) {
-                        return;
-}      
-                if (terrain == TerrainType.GRASSLAND ||
-                    terrain == TerrainType.FOREST) {
-
-                    double chance;
-
-                    switch (currentSeason) {
-                        case SPRING -> chance = 0.03;
-                        case SUMMER -> chance = 0.015;
-                        case AUTUMN -> chance = 0.005;  
-                        case WINTER -> chance = 0.0;
-                        default -> chance = 0.05;
-                    }
-
-                    if (random.nextDouble() < chance) {
-
-                        newPlants.add(
-                            plant.createOffspring(spawnPos)
-                        );
-                    }
                 }
             }
+
+            plant.resetSpreadTimer();
         }
 
         entities.addAll(newPlants);
@@ -245,11 +244,11 @@ public class EntityManager {
                 .filter(e -> e instanceof Grass)
                 .count();   
 
-        if (grassCount > 80) {
+        if (grassCount > Constants.MAX_GRASS) {
 
             entities.stream()
                 .filter(e -> e instanceof Grass)
-                .skip(60)
+                .skip(Constants.MAX_GRASS)
                 .forEach(e -> e.setAlive(false));
 
             entities.removeIf(e -> !e.isAlive());
@@ -356,7 +355,7 @@ public class EntityManager {
                 double minDist =
                     a.getSize() + b.getSize();
 
-                if (dist < minDist && dist > 0.01) {
+                if (dist < minDist) {
 
                     Entity higher =
                         a.getPriority() >= b.getPriority()
@@ -368,19 +367,42 @@ public class EntityManager {
                             ? a
                             : b;
 
-                    Vector2D pushDir =
-                        higher.getPosition()
+                    if (!(lower instanceof Animal lowerAnimal)) {
+                        continue;
+                    }
+
+                    Vector2D pushDir = dist <= 0.01
+                        ? Vector2D.randomDirection()
+                        : higher.getPosition()
                             .directionTo(lower.getPosition());
 
                     double pushDist =
                         minDist - dist + 0.1;
 
-                    lower.setPosition(
-                        lower.getPosition().add(
-                            pushDir.multiply(pushDist)
-                        )
-                    );
+                    moveAside(lowerAnimal, pushDir, pushDist);
                 }
+            }
+        }
+    }
+
+    private void moveAside(Animal animal, Vector2D pushDir, double pushDist) {
+
+        Vector2D[] candidates = {
+            animal.getPosition().add(pushDir.multiply(pushDist)),
+            animal.getPosition().add(new Vector2D(-pushDir.getY(), pushDir.getX()).multiply(pushDist)),
+            animal.getPosition().add(new Vector2D(pushDir.getY(), -pushDir.getX()).multiply(pushDist))
+        };
+
+        for (Vector2D candidate : candidates) {
+
+            TerrainType terrain =
+                worldMap.getTerrainAt(candidate.getX(), candidate.getY());
+
+            if (worldMap.isInBounds(candidate.getX(), candidate.getY()) &&
+                animal.canTraverse(terrain)) {
+
+                animal.setPosition(candidate);
+                return;
             }
         }
     }
@@ -456,12 +478,12 @@ public class EntityManager {
             animalClass.getSimpleName()
         ) {
 
-            case "Rabbit" -> 80;
-            case "Deer" -> 40;
-            case "Wolf" -> 15;
-            case "Tiger" -> 6;
-            case "Elephant" -> 6;
-            case "Hunter" -> 3;
+            case "Rabbit" -> Constants.MAX_RABBITS;
+            case "Deer" -> Constants.MAX_DEER;
+            case "Wolf" -> Constants.MAX_WOLVES;
+            case "Tiger" -> Constants.MAX_TIGERS;
+            case "Elephant" -> Constants.MAX_ELEPHANTS;
+            case "Hunter" -> Constants.MAX_HUNTERS;
 
             default -> 0;
         };

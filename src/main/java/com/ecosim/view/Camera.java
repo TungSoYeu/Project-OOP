@@ -1,7 +1,6 @@
 package com.ecosim.view;
 
 import com.ecosim.util.Constants;
-import com.ecosim.util.Vector2D;
 
 /**
  * Camera điều khiển viewport - zoom, pan, và chuyển đổi tọa độ.

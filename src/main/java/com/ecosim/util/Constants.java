@@ -17,6 +17,9 @@ public final class Constants {
     /** Kích thước mỗi tile (pixels) - dùng cho rendering */
     public static final int TILE_SIZE = 16;
 
+    /** Seed cố định để bản đồ mặc định ổn định giữa các lần chạy/test. */
+    public static final long WORLD_SEED = 20260521L;
+
     // ===== Vùng địa lý (tile coordinates) =====
     // Đồng cỏ: phía trên bên trái
     public static final int GRASSLAND_X1 = 0, GRASSLAND_Y1 = 0;
@@ -117,6 +120,10 @@ public final class Constants {
     public static final int MAX_TIGERS = 8;
     public static final int MAX_ELEPHANTS = 3;
     public static final int MAX_HUNTERS = 1;
+
+    // ===== Plant Caps =====
+    public static final int MAX_GRASS = 160;
+    public static final int MAX_PLANTS = 220;
 
     // ===== Window =====
     public static final int WINDOW_WIDTH = 1280;
